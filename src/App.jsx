@@ -1,104 +1,78 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Plus, Music, Mic, Volume2, Edit2, Trash2, GripVertical, Copy, LogOut, Moon, Sun, FolderOpen } from 'lucide-react';
-
-const RadioRundownPro = () => {
-  const [theme, setTheme] = useState('light');
-  const [currentUser] = useState({ id: '1', name: 'Demo User', email: 'demo@radio.com' });
-  const [showLogin] = useState(false);
-  const [rundowns, setRundowns] = useState([
-    {
-      id: '1',
-      name: 'Mijn Eerste Draaiboek',
-      date: '2025-01-15',
-      items: [
-        { id: '1', type: 'music', title: 'Bohemian Rhapsody', artist: 'Queen', duration: 355, color: '#ef4444' },
-        { id: '2', type: 'talk', title: 'Opening', duration: 120, color: '#22c55e', firstWords: 'Goedemorgen!', notes: 'Welkom', lastWords: 'Nu muziek' }
-      ]
-    }
-  ]);
-  const [currentRundownId, setCurrentRundownId] = useState('1');
-  const [showRundownSelector, setShowRundownSelector] = useState(false);
-  const [items, setItems] = useState([]);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const intervalRef = useRef(null);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
-  const [expandedItems, setExpandedItems] = useState(new Set());
-  const [showPrintModal, setShowPrintModal] = useState(false);
-  const [printMode, setPrintMode] = useState('rundown');
-  const [editingRunbookName, setEditingRunbookName] = useState(null);
-  const [showClockWindow, setShowClockWindow] = useState(false);
-  const [draggedItem, setDraggedItem] = useState(null);
-  const [dragOverIndex, setDragOverIndex] = useState(null);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showJingleEditor, setShowJingleEditor] = useState(false);
-  const [jingles] = useState([
-    { id: '1', title: 'Station ID', duration: 15 },
-    { id: '2', title: 'Weer Jingle', duration: 10 }
-  ]);
-  const [userSettings, setUserSettings] = useState({
-    name: 'Demo User',
-    email: 'demo@radio.com',
-    password: 'demo123'
-  });
-  const [spotifyClientId, setSpotifyClientId] = useState('');
-  const [spotifyClientSecret, setSpotifyClientSecret] = useState('');
-  const [spotifyToken, setSpotifyToken] = useState(null);
-  const [spotifyStatus, setSpotifyStatus] = useState('');
-  const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
-
-  const t = theme === 'light' ? {
-    bg: 'bg-gray-50',
-    card: 'bg-white',
-    text: 'text-gray-900',
-    textSecondary: 'text-gray-600',
-    border: 'border-gray-200',
-    input: 'bg-white border-gray-300 text-gray-900',
-    button: 'bg-blue-600 hover:bg-blue-700 text-white',
-    buttonSecondary: 'bg-gray-200 hover:bg-gray-300 text-gray-900'
-  } : {
-    bg: 'bg-gray-900',
-    card: 'bg-gray-800',
-    text: 'text-white',
-    textSecondary: 'text-gray-400',
-    border: 'border-gray-700',
-    input: 'bg-gray-700 border-gray-600 text-white',
-    button: 'bg-blue-600 hover:bg-blue-700 text-white',
-    buttonSecondary: 'bg-gray-700 hover:bg-gray-600 text-white'
+const deleteItem = async (id) => {
+    await supabase.from('items').delete().eq('id', id);
+    setItems(items.filter(item => item.id !== id));
   };
 
-  const handleLogout = () => {
-    console.log('Logout');
+  const handleDragStart = (e, item, index) => {
+    setDraggedItem({ item, index });
   };
 
-  useEffect(() => {
-    const rundown = rundowns.find(r => r.id === currentRundownId);
-    if (rundown) {
-      setItems(rundown.items || []);
-    }
-  }, [currentRundownId, rundowns]);
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
 
-  useEffect(() => {
-    if (isPlaying) {
-      intervalRef.current = setInterval(() => {
-        setCurrentTime(prev => {
-          const total = items.reduce((sum, item) => sum + item.duration, 0);
-          if (prev >= total) {
-            setIsPlaying(false);
-            return 0;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-    } else {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+  const handleDrop = async (e, dropIndex) => {
+    e.preventDefault();
+    if (!draggedItem || draggedItem.index === dropIndex) {
+      setDraggedItem(null);
+      setDragOverIndex(null);
+      return;
     }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+
+    const newItems = [...items];
+    const [movedItem] = newItems.splice(draggedItem.index, 1);
+    newItems.splice(dropIndex, 0, movedItem);
+
+    // Update positions in database
+    const updates = newItems.map((item, index) => ({
+      id: item.id,
+      position: index
+    }));
+
+    for (const update of updates) {
+      await supabase
+        .from('items')
+        .update({ position: update.position })
+        .eq('id', update.id);
+    }
+
+    setItems(newItems);
+    setDraggedItem(null);
+    setDragOverIndex(null);
+  };
+
+  const quickAdd = (type) => {
+    const templates = {
+      music: { type: 'music', title: 'Nieuw nummer', artist: '', duration: 180, color: '#ef4444' },
+      talk: { type: 'talk', title: 'Presentatie', duration: 120, color: '#22c55e' },
+      reportage: { type: 'reportage', title: 'Reportage', duration: 180, color: '#f59e0b' },
+      live: { type: 'live', title: 'Live', duration: 300, color: '#8b5cf6' },
+      game: { type: 'game', title: 'Spel', duration: 240, color: '#f59e0b' }
     };
-  }, [isPlaying, items]);
+    if (templates[type]) addItem(templates[type]);
+  };
 
+  const addJingle = async (jingle) => {
+    addItem({
+      type: 'jingle',
+      title: jingle.title,
+      duration: jingle.duration,
+      color: '#3b82f6'
+    });
+  };
+
+  const toggleExpanded = (id) => {
+    const newSet = new Set(expandedItems);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setExpandedItems(newSet);
+  };
+
+  // Utility functions
   const formatTime = (seconds) => {
     const hours = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -126,173 +100,57 @@ const RadioRundownPro = () => {
 
   const totalDuration = items.reduce((sum, item) => sum + item.duration, 0);
 
-  const createNewRunbook = () => {
-    const newId = Date.now().toString();
-    const newRunbook = {
-      id: newId,
-      name: 'Nieuw Draaiboek',
-      date: new Date().toISOString().split('T')[0],
-      items: []
-    };
-    setRundowns([...rundowns, newRunbook]);
-    setCurrentRundownId(newId);
-  };
-
-  const duplicateRunbook = (id) => {
-    const original = rundowns.find(r => r.id === id);
-    if (original) {
-      const newId = Date.now().toString();
-      const duplicate = {
-        ...original,
-        id: newId,
-        name: original.name + ' (kopie)',
-        items: [...original.items]
-      };
-      setRundowns([...rundowns, duplicate]);
-    }
-  };
-
-  const deleteRunbook = (id) => {
-    if (rundowns.length > 1) {
-      const filtered = rundowns.filter(r => r.id !== id);
-      setRundowns(filtered);
-      if (currentRundownId === id) {
-        setCurrentRundownId(filtered[0].id);
-      }
-    }
-  };
-
-  const renameRunbook = (id, newName) => {
-    setRundowns(rundowns.map(r => r.id === id ? { ...r, name: newName } : r));
-  };
-
-  const updateItems = (newItems) => {
-    setRundowns(rundowns.map(r => 
-      r.id === currentRundownId ? { ...r, items: newItems } : r
-    ));
-    setItems(newItems);
-  };
-
-  const addItem = (item) => {
-    const colorMap = {
-      music: '#ef4444',
-      talk: '#22c55e',
-      jingle: '#3b82f6',
-      game: '#f59e0b',
-      reportage: '#f59e0b',
-      live: '#8b5cf6'
-    };
-    const newItem = {
-      ...item,
-      id: Date.now().toString(),
-      color: colorMap[item.type] || '#6b7280'
-    };
-    updateItems([...items, newItem]);
-    setShowAddForm(false);
-  };
-
-  const quickAdd = (type) => {
-    const templates = {
-      music: { type: 'music', title: 'Nieuw nummer', artist: '', duration: 180 },
-      talk: { type: 'talk', title: 'Presentatie', duration: 120 },
-      reportage: { type: 'reportage', title: 'Reportage', duration: 180 },
-      live: { type: 'live', title: 'Live', duration: 300 },
-      game: { type: 'game', title: 'Spel', duration: 240 }
-    };
-    if (templates[type]) addItem(templates[type]);
-  };
-
-  const addJingle = (jingle) => {
-    addItem({
-      type: 'jingle',
-      title: jingle.title,
-      duration: jingle.duration
-    });
-  };
-
-  const updateItem = (id, updated) => {
-    updateItems(items.map(item => item.id === id ? { ...item, ...updated } : item));
-    setEditingItem(null);
-  };
-
-  const deleteItem = (id) => {
-    updateItems(items.filter(item => item.id !== id));
-  };
-
-  const handleDragStart = (e, item, index) => {
-    setDraggedItem({ item, index });
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (e, index) => {
-    e.preventDefault();
-    setDragOverIndex(index);
-  };
-
-  const handleDrop = (e, dropIndex) => {
-    e.preventDefault();
-    if (draggedItem && draggedItem.index !== dropIndex) {
-      const newItems = [...items];
-      const movedItem = newItems.splice(draggedItem.index, 1)[0];
-      newItems.splice(dropIndex, 0, movedItem);
-      updateItems(newItems);
-    }
-    setDraggedItem(null);
-    setDragOverIndex(null);
-  };
-
-  const toggleExpanded = (id) => {
-    const newSet = new Set(expandedItems);
-    if (newSet.has(id)) {
-      newSet.delete(id);
+  // Timer
+  useEffect(() => {
+    if (isPlaying) {
+      intervalRef.current = setInterval(() => {
+        setCurrentTime(prev => {
+          if (prev >= totalDuration) {
+            setIsPlaying(false);
+            return 0;
+          }
+          return prev + 1;
+        });
+      }, 1000);
     } else {
-      newSet.add(id);
+      if (intervalRef.current) clearInterval(intervalRef.current);
     }
-    setExpandedItems(newSet);
-  };
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [isPlaying, totalDuration]);
 
+  // Print function
   const printRundown = () => {
-    let content = 'RADIO DRAAIBOEK\n';
-    content = content + '================\n\n';
-    content = content + 'Draaiboek: ' + (currentRunbook ? currentRunbook.name : 'Onbekend') + '\n';
-    content = content + 'Datum: ' + new Date().toLocaleDateString('nl-NL') + '\n';
-    content = content + 'Totale duur: ' + formatTime(totalDuration) + '\n\n';
-    content = content + '================\n\n';
+    let content = 'RADIO DRAAIBOEK\n================\n\n';
+    content += 'Draaiboek: ' + (rundowns.find(r => r.id === currentRundownId)?.name || 'Onbekend') + '\n';
+    content += 'Datum: ' + new Date().toLocaleDateString('nl-NL') + '\n';
+    content += 'Totale duur: ' + formatTime(totalDuration) + '\n\n================\n\n';
     
     items.forEach((item, index) => {
       const cumTime = getCumulativeTime(index);
-      content = content + (index + 1) + '. [' + item.type.toUpperCase() + '] ' + item.title + '\n';
-      if (item.artist) content = content + '   Artiest: ' + item.artist + '\n';
-      content = content + '   Duur: ' + formatTimeShort(item.duration) + ' | Tot: ' + formatTime(cumTime) + '\n';
+      content += (index + 1) + '. [' + item.type.toUpperCase() + '] ' + item.title + '\n';
+      if (item.artist) content += '   Artiest: ' + item.artist + '\n';
+      content += '   Duur: ' + formatTimeShort(item.duration) + ' | Tot: ' + formatTime(cumTime) + '\n';
       
-      if (item.connectionType) {
-        content = content + '   Verbinding: ' + item.connectionType;
-        if (item.phoneNumber && item.connectionType === 'Telefoon') {
-          content = content + ' (' + item.phoneNumber + ')';
+      if (item.connection_type) {
+        content += '   Verbinding: ' + item.connection_type;
+        if (item.phone_number && item.connection_type === 'Telefoon') {
+          content += ' (' + item.phone_number + ')';
         }
-        content = content + '\n';
+        content += '\n';
       }
       
       if (printMode === 'full') {
-        if (item.firstWords) {
-          content = content + '   EERSTE WOORDEN: ' + item.firstWords + '\n';
-        }
-        if (item.notes) {
-          content = content + '   HOOFDTEKST: ' + item.notes + '\n';
-        }
-        if (item.lastWords) {
-          content = content + '   LAATSTE WOORDEN: ' + item.lastWords + '\n';
-        }
+        if (item.first_words) content += '   EERSTE WOORDEN: ' + item.first_words + '\n';
+        if (item.notes) content += '   HOOFDTEKST: ' + item.notes + '\n';
+        if (item.last_words) content += '   LAATSTE WOORDEN: ' + item.last_words + '\n';
       } else {
-        if (item.firstWords) {
-          content = content + '   EW: ' + item.firstWords.substring(0, 60) + (item.firstWords.length > 60 ? '...' : '') + '\n';
-        }
-        if (item.lastWords) {
-          content = content + '   LW: ' + item.lastWords.substring(0, 60) + (item.lastWords.length > 60 ? '...' : '') + '\n';
-        }
+        if (item.first_words) content += '   EW: ' + item.first_words.substring(0, 60) + (item.first_words.length > 60 ? '...' : '') + '\n';
+        if (item.last_words) content += '   LW: ' + item.last_words.substring(0, 60) + (item.last_words.length > 60 ? '...' : '') + '\n';
       }
       
-      content = content + '\n';
+      content += '\n';
     });
     
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
@@ -300,65 +158,9 @@ const RadioRundownPro = () => {
     const link = document.createElement('a');
     link.href = url;
     link.download = 'draaiboek-' + new Date().toISOString().split('T')[0] + '.txt';
-    document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
     URL.revokeObjectURL(url);
     setShowPrintModal(false);
-  };
-
-  const searchSpotify = async (title, artist) => {
-    if (!spotifyClientId || !spotifyClientSecret) {
-      setSpotifyStatus('❌ Spotify credentials niet ingesteld');
-      return null;
-    }
-
-    setIsSearchingSpotify(true);
-    setSpotifyStatus('Zoeken op Spotify...');
-
-    try {
-      if (!spotifyToken) {
-        const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': 'Basic ' + btoa(spotifyClientId + ':' + spotifyClientSecret)
-          },
-          body: 'grant_type=client_credentials'
-        });
-
-        if (!tokenResponse.ok) {
-          throw new Error('Token request failed');
-        }
-
-        const tokenData = await tokenResponse.json();
-        setSpotifyToken(tokenData.access_token);
-        
-        const query = encodeURIComponent('track:' + title + ' artist:' + artist);
-        const searchResponse = await fetch('https://api.spotify.com/v1/search?q=' + query + '&type=track&limit=1', {
-          headers: { 'Authorization': 'Bearer ' + tokenData.access_token }
-        });
-
-        if (!searchResponse.ok) throw new Error('Search failed');
-
-        const searchData = await searchResponse.json();
-        if (searchData.tracks.items.length > 0) {
-          const track = searchData.tracks.items[0];
-          setSpotifyStatus('✅ Gevonden: ' + track.name);
-          setIsSearchingSpotify(false);
-          return {
-            name: track.name,
-            artist: track.artists[0].name,
-            duration: Math.round(track.duration_ms / 1000)
-          };
-        }
-      }
-    } catch (error) {
-      setSpotifyStatus('⚠️ Spotify werkt alleen in productie omgeving');
-    }
-    
-    setIsSearchingSpotify(false);
-    return null;
   };
 
   const getIcon = (type) => {
@@ -373,13 +175,14 @@ const RadioRundownPro = () => {
     return icons[type] || <Music size={16} />;
   };
 
+  // Clock Component
   const Clock = () => {
     const radius = 140;
     const center = 160;
     const hourDuration = 3600;
     
     let acc = 0;
-    const segments = items.map((item, i) => {
+    const segments = items.map((item) => {
       const start = acc;
       const end = acc + item.duration;
       if (start >= hourDuration) return null;
@@ -399,7 +202,7 @@ const RadioRundownPro = () => {
       const largeArc = angle > 180 ? 1 : 0;
       const path = 'M ' + center + ' ' + center + ' L ' + x1 + ' ' + y1 + ' A ' + radius + ' ' + radius + ' 0 ' + largeArc + ' 1 ' + x2 + ' ' + y2 + ' Z';
       
-      acc = acc + item.duration;
+      acc += item.duration;
       
       return (
         <path
@@ -448,14 +251,7 @@ const RadioRundownPro = () => {
               </g>
             );
           })}
-          <line
-            x1={center}
-            y1={center}
-            x2={handX}
-            y2={handY}
-            stroke={theme === 'light' ? '#1f2937' : '#fff'}
-            strokeWidth={3}
-          />
+          <line x1={center} y1={center} x2={handX} y2={handY} stroke={theme === 'light' ? '#1f2937' : '#fff'} strokeWidth={3} />
           <circle cx={center} cy={center} r={6} fill={theme === 'light' ? '#1f2937' : '#fff'} />
         </svg>
         
@@ -466,29 +262,31 @@ const RadioRundownPro = () => {
           Totaal: {formatTime(totalDuration)}
           {totalDuration > 3600 && <span className="text-red-500 ml-2">(+{formatTime(totalDuration - 3600)} over)</span>}
         </div>
-        <button
-          onClick={() => setIsPlaying(!isPlaying)}
-          className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2'}
-        >
+        <button onClick={() => setIsPlaying(!isPlaying)} className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2'}>
           {isPlaying ? <><Pause size={16} />Pause</> : <><Play size={16} />Start</>}
         </button>
       </div>
     );
   };
 
+  // Item Form Component with Spotify Search
   const ItemForm = ({ item, onSave, onCancel }) => {
     const [form, setForm] = useState(item || {
       type: 'music',
       title: '',
       artist: '',
       duration: 180,
-      firstWords: '',
+      first_words: '',
       notes: '',
-      lastWords: '',
+      last_words: '',
       color: '#ef4444',
-      connectionType: '',
-      phoneNumber: ''
+      connection_type: '',
+      phone_number: ''
     });
+
+    const [localSpotifyResults, setLocalSpotifyResults] = useState([]);
+    const [showLocalResults, setShowLocalResults] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const colorOptions = [
       { name: 'Rood', value: '#ef4444' },
@@ -502,6 +300,28 @@ const RadioRundownPro = () => {
     ];
 
     const connectionTypes = ['LUCI', 'Teams', 'WZ', 'Telefoon'];
+
+    const handleSpotifySearch = async () => {
+      const query = searchQuery || form.title + (form.artist ? ' ' + form.artist : '');
+      if (!query) return;
+
+      setIsSearchingSpotify(true);
+      const results = await searchSpotifyTrack(query);
+      setLocalSpotifyResults(results);
+      setShowLocalResults(results.length > 0);
+      setIsSearchingSpotify(false);
+    };
+
+    const selectSpotifyResult = (result) => {
+      setForm({
+        ...form,
+        title: result.name,
+        artist: result.artist,
+        duration: result.duration
+      });
+      setShowLocalResults(false);
+      setLocalSpotifyResults([]);
+    };
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -552,30 +372,53 @@ const RadioRundownPro = () => {
                 </div>
 
                 <div>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (!form.title) return;
-                      const track = await searchSpotify(form.title, form.artist || '');
-                      if (track) {
-                        setForm({
-                          ...form,
-                          title: track.name,
-                          artist: track.artist,
-                          duration: track.duration
-                        });
-                      }
-                    }}
-                    disabled={isSearchingSpotify || !form.title}
-                    className={'w-full px-3 py-2 rounded flex items-center justify-center gap-2 disabled:opacity-50 ' + t.button}
-                  >
-                    {isSearchingSpotify ? 'Zoeken...' : '🎵 Zoek op Spotify'}
-                  </button>
-                  {spotifyStatus && (
-                    <div className={'text-xs p-2 mt-2 rounded ' + (theme === 'light' ? 'bg-gray-100' : 'bg-gray-700')}>
-                      {spotifyStatus}
+                  <label className={'block text-sm mb-1 ' + t.text}>Spotify Zoeken</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Bijv: hotel california"
+                      className={'flex-1 px-3 py-2 rounded border ' + t.input}
+                      onKeyPress={(e) => e.key === 'Enter' && handleSpotifySearch()}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSpotifySearch}
+                      disabled={isSearchingSpotify}
+                      className={'px-4 py-2 rounded flex items-center gap-2 disabled:opacity-50 ' + t.button}
+                    >
+                      {isSearchingSpotify ? (
+                        <>Zoeken...</>
+                      ) : (
+                        <><Search size={16} /> Zoek</>
+                      )}
+                    </button>
+                  </div>
+                  
+                  {showLocalResults && localSpotifyResults.length > 0 && (
+                    <div className={'mt-2 border rounded ' + t.border}>
+                      {localSpotifyResults.map((result, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => selectSpotifyResult(result)}
+                          className={'w-full text-left px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900 flex items-center justify-between border-b last:border-b-0 ' + t.border}
+                        >
+                          <div className="flex-1">
+                            <div className={'font-medium ' + t.text}>{result.name}</div>
+                            <div className={'text-sm ' + t.textSecondary}>
+                              {result.artist} • {formatTimeShort(result.duration)}
+                            </div>
+                          </div>
+                          <Check size={16} className="text-green-500" />
+                        </button>
+                      ))}
                     </div>
                   )}
+                  
+                  <div className={'text-xs mt-1 ' + t.textSecondary}>
+                    💡 Tip: Type een deel van de titel (bijv. "hotel") en kies uit de resultaten
+                  </div>
                 </div>
               </>
             )}
@@ -613,8 +456,8 @@ const RadioRundownPro = () => {
                     <div>
                       <label className={'block text-sm mb-1 ' + t.text}>Verbinding type</label>
                       <select
-                        value={form.connectionType || ''}
-                        onChange={(e) => setForm({...form, connectionType: e.target.value})}
+                        value={form.connection_type || ''}
+                        onChange={(e) => setForm({...form, connection_type: e.target.value})}
                         className={'w-full px-3 py-2 rounded border ' + t.input}
                       >
                         <option value="">Selecteer verbinding...</option>
@@ -624,13 +467,13 @@ const RadioRundownPro = () => {
                       </select>
                     </div>
 
-                    {form.connectionType === 'Telefoon' && (
+                    {form.connection_type === 'Telefoon' && (
                       <div>
                         <label className={'block text-sm mb-1 ' + t.text}>Telefoonnummer</label>
                         <input
                           type="text"
-                          value={form.phoneNumber || ''}
-                          onChange={(e) => setForm({...form, phoneNumber: e.target.value})}
+                          value={form.phone_number || ''}
+                          onChange={(e) => setForm({...form, phone_number: e.target.value})}
                           placeholder="06-12345678"
                           className={'w-full px-3 py-2 rounded border ' + t.input}
                         />
@@ -642,8 +485,8 @@ const RadioRundownPro = () => {
                 <div>
                   <label className={'block text-sm mb-1 ' + t.text}>Eerste woorden</label>
                   <textarea
-                    value={form.firstWords || ''}
-                    onChange={(e) => setForm({...form, firstWords: e.target.value})}
+                    value={form.first_words || ''}
+                    onChange={(e) => setForm({...form, first_words: e.target.value})}
                     className={'w-full px-3 py-2 rounded border h-16 ' + t.input}
                   />
                 </div>
@@ -658,8 +501,8 @@ const RadioRundownPro = () => {
                 <div>
                   <label className={'block text-sm mb-1 ' + t.text}>Laatste woorden</label>
                   <textarea
-                    value={form.lastWords || ''}
-                    onChange={(e) => setForm({...form, lastWords: e.target.value})}
+                    value={form.last_words || ''}
+                    onChange={(e) => setForm({...form, last_words: e.target.value})}
                     className={'w-full px-3 py-2 rounded border h-16 ' + t.input}
                   />
                 </div>
@@ -685,6 +528,67 @@ const RadioRundownPro = () => {
       </div>
     );
   };
+
+  // Login Screen
+  if (showLogin) {
+    return (
+      <div className={t.bg + ' min-h-screen flex items-center justify-center p-4'}>
+        <div className={t.card + ' rounded-lg shadow-xl p-8 w-full max-w-md border ' + t.border}>
+          <h1 className={t.text + ' text-3xl font-bold mb-2 text-center'}>📻 Radio Rundown Pro</h1>
+          <p className={t.textSecondary + ' text-center mb-8'}>Professioneel draaiboek beheer</p>
+          
+          <div className="space-y-4">
+            {isRegistering && (
+              <div>
+                <label className={'block text-sm font-medium ' + t.text + ' mb-1'}>Naam</label>
+                <input
+                  type="text"
+                  value={loginForm.name}
+                  onChange={(e) => setLoginForm({...loginForm, name: e.target.value})}
+                  className={'w-full ' + t.input + ' rounded px-3 py-2 border'}
+                />
+              </div>
+            )}
+            
+            <div>
+              <label className={'block text-sm font-medium ' + t.text + ' mb-1'}>Email</label>
+              <input
+                type="email"
+                value={loginForm.email}
+                onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
+                className={'w-full ' + t.input + ' rounded px-3 py-2 border'}
+              />
+            </div>
+            
+            <div>
+              <label className={'block text-sm font-medium ' + t.text + ' mb-1'}>Wachtwoord</label>
+              <input
+                type="password"
+                value={loginForm.password}
+                onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
+                className={'w-full ' + t.input + ' rounded px-3 py-2 border'}
+                onKeyPress={(e) => e.key === 'Enter' && (isRegistering ? handleRegister() : handleLogin())}
+              />
+            </div>
+            
+            <button
+              onClick={isRegistering ? handleRegister : handleLogin}
+              className={'w-full ' + t.button + ' px-4 py-3 rounded-lg font-medium'}
+            >
+              {isRegistering ? 'Account aanmaken' : 'Inloggen'}
+            </button>
+            
+            <button
+              onClick={() => setIsRegistering(!isRegistering)}
+              className={'w-full ' + t.buttonSecondary + ' px-4 py-3 rounded-lg font-medium'}
+            >
+              {isRegistering ? 'Al een account? Inloggen' : 'Nog geen account? Registreren'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const currentRunbook = rundowns.find(r => r.id === currentRundownId);
 
@@ -726,7 +630,7 @@ const RadioRundownPro = () => {
                 className={t.buttonSecondary + ' px-4 py-2 rounded-lg flex items-center gap-2'}
               >
                 <LogOut size={16} />
-                {currentUser.name}
+                {currentUser?.email}
               </button>
             </div>
           </div>
@@ -753,12 +657,6 @@ const RadioRundownPro = () => {
               🕐 {showClockWindow ? 'Verberg Klok' : 'Toon Klok'}
             </button>
             <button
-              onClick={() => setShowSettings(true)}
-              className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2'}
-            >
-              ⚙️ Instellingen
-            </button>
-            <button
               onClick={() => setShowPrintModal(true)}
               className={t.buttonSecondary + ' px-3 py-2 rounded-lg text-sm'}
             >
@@ -783,366 +681,270 @@ const RadioRundownPro = () => {
             <div className="flex gap-2 flex-wrap">
               <button onClick={() => quickAdd('music')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>🎵 Muziek</button>
               <button onClick={() => quickAdd('talk')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>🎙️ Presentatie</button>
-              <button onClick={() => quickAdd('reportage')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>⭐ Reportage</button>
-              <button onClick={() => quickAdd('live')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>📡 Live</button>
-              <button onClick={() => quickAdd('game')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>🎮 Spel</button>
-              <button onClick={() => setShowJingleEditor(true)} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>🔔 Jingles ▼</button>
-            </div>
-          </div>
-        </div>
+              <button onClick={()// src/App.jsx - Radio Rundown Pro v1.1 met Supabase + Centrale Spotify
 
-        {showRundownSelector && (
-          <div className={t.card + ' rounded-lg p-4 mb-6 shadow border ' + t.border}>
-            <h3 className={'font-bold mb-3 ' + t.text}>Mijn Draaiboeken</h3>
-            <div className="space-y-2">
-              {rundowns.map(rb => (
-                <div key={rb.id} className={'flex justify-between p-3 rounded ' + (rb.id === currentRundownId ? 'bg-blue-100 dark:bg-blue-900' : t.buttonSecondary)}>
-                  <button onClick={() => { setCurrentRundownId(rb.id); setShowRundownSelector(false); }} className="flex-1 text-left">
-                    <div className={'font-medium ' + t.text}>{rb.name}</div>
-                    <div className={'text-sm ' + t.textSecondary}>{rb.date}</div>
-                  </button>
-                  <div className="flex gap-2">
-                    <button onClick={() => duplicateRunbook(rb.id)} className={t.buttonSecondary + ' p-2 rounded'}>
-                      <Copy size={16} />
-                    </button>
-                    <button onClick={() => deleteRunbook(rb.id)} className={t.buttonSecondary + ' p-2 rounded hover:bg-red-100'}>
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+import React, { useState, useRef, useEffect } from 'react';
+import { Play, Pause, Plus, Music, Mic, Volume2, Edit2, Trash2, GripVertical, Copy, LogOut, Moon, Sun, FolderOpen, Search, Check } from 'lucide-react';
+import { supabase } from './supabaseClient';
+import { searchSpotifyTrack } from './spotifyClient';
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className={t.card + ' rounded-lg p-6 shadow border ' + t.border}>
-            <h2 className={'text-xl font-semibold mb-4 ' + t.text}>Rundown</h2>
-            <div className="space-y-2">
-              {items.length === 0 ? (
-                <div className={'text-center py-12 ' + t.textSecondary}>
-                  <Music size={48} className="mx-auto mb-4 opacity-50" />
-                  <p>Nog geen items</p>
-                </div>
-              ) : (
-                items.map((item, idx) => {
-                  const isExpanded = expandedItems.has(item.id);
-                  const isDragOver = dragOverIndex === idx;
-                  return (
-                    <div 
-                      key={item.id} 
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, item, idx)}
-                      onDragOver={(e) => handleDragOver(e, idx)}
-                      onDrop={(e) => handleDrop(e, idx)}
-                      className={'rounded-lg p-4 border cursor-move ' + t.card + ' ' + t.border + (isDragOver ? ' border-t-4 border-t-blue-500' : '')}
-                    >
-                      <div className="flex justify-between">
-                        <div className="flex gap-3 flex-1">
-                          <GripVertical size={16} className={t.textSecondary} />
-                          <div style={{ color: item.color }}>{getIcon(item.type)}</div>
-                          <div 
-                            className="flex-1 cursor-pointer"
-                            onClick={() => toggleExpanded(item.id)}
-                          >
-                            <div className={'font-medium ' + t.text}>{item.title}</div>
-                            {item.artist && <div className={'text-sm ' + t.textSecondary}>{item.artist}</div>}
-                            
-                            {(item.firstWords || item.lastWords || item.connectionType) && (
-                              <div className={'text-xs mt-1 ' + t.textSecondary}>
-                                {item.firstWords && (
-                                  <span>EW: {item.firstWords.substring(0, 40)}{item.firstWords.length > 40 ? '...' : ''}</span>
-                                )}
-                                {item.firstWords && item.lastWords && <span className="mx-1">|</span>}
-                                {item.lastWords && (
-                                  <span>LW: {item.lastWords.substring(0, 40)}{item.lastWords.length > 40 ? '...' : ''}</span>
-                                )}
-                                {item.connectionType && (
-                                  <div className="mt-1">
-                                    <span className="font-semibold">Verbinding: {item.connectionType}</span>
-                                    {item.connectionType === 'Telefoon' && item.phoneNumber && (
-                                      <span> ({item.phoneNumber})</span>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex gap-3">
-                          <div className="text-right">
-                            <div className={'text-sm font-mono ' + t.text}>{formatTimeShort(item.duration)}</div>
-                            <div className={'text-xs font-mono ' + t.textSecondary}>tot {formatTime(getCumulativeTime(idx))}</div>
-                          </div>
-                          <button onClick={() => setEditingItem(item)} className={t.textSecondary}>
-                            <Edit2 size={16} />
-                          </button>
-                          <button onClick={() => deleteItem(item.id)} className={t.textSecondary + ' hover:text-red-500'}>
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </div>
+const RadioRundownPro = () => {
+  const [theme, setTheme] = useState('light');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [showLogin, setShowLogin] = useState(true);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [loginForm, setLoginForm] = useState({ email: '', password: '', name: '' });
+  
+  const [rundowns, setRundowns] = useState([]);
+  const [currentRundownId, setCurrentRundownId] = useState(null);
+  const [showRundownSelector, setShowRundownSelector] = useState(false);
+  const [items, setItems] = useState([]);
+  
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const intervalRef = useRef(null);
+  
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [expandedItems, setExpandedItems] = useState(new Set());
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printMode, setPrintMode] = useState('rundown');
+  const [editingRunbookName, setEditingRunbookName] = useState(null);
+  const [showClockWindow, setShowClockWindow] = useState(false);
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showJingleEditor, setShowJingleEditor] = useState(false);
+  
+  const [jingles, setJingles] = useState([]);
+  const [spotifySearchResults, setSpotifySearchResults] = useState([]);
+  const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
+  const [showSpotifyResults, setShowSpotifyResults] = useState(false);
 
-                      {isExpanded && (item.firstWords || item.notes || item.lastWords) && (
-                        <div className={'mt-3 pt-3 border-t ' + t.border}>
-                          <div className={'text-sm p-3 rounded ' + (theme === 'light' ? 'bg-gray-50' : 'bg-gray-900')}>
-                            {item.firstWords && (
-                              <div className="mb-3 p-2 bg-green-100 dark:bg-green-900 bg-opacity-30 rounded">
-                                <div className="text-xs text-green-600 dark:text-green-400 mb-1 font-semibold">EERSTE WOORDEN:</div>
-                                <div>{item.firstWords}</div>
-                              </div>
-                            )}
-                            {item.notes && (
-                              <div className="mb-3">
-                                <div className={'text-xs mb-1 font-semibold ' + t.textSecondary}>HOOFDTEKST:</div>
-                                <div>{item.notes}</div>
-                              </div>
-                            )}
-                            {item.lastWords && (
-                              <div className="p-2 bg-blue-100 dark:bg-blue-900 bg-opacity-30 rounded">
-                                <div className="text-xs text-blue-600 dark:text-blue-400 mb-1 font-semibold">LAATSTE WOORDEN:</div>
-                                <div>{item.lastWords}</div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
+  const t = theme === 'light' ? {
+    bg: 'bg-gray-50',
+    card: 'bg-white',
+    text: 'text-gray-900',
+    textSecondary: 'text-gray-600',
+    border: 'border-gray-200',
+    input: 'bg-white border-gray-300 text-gray-900',
+    button: 'bg-blue-600 hover:bg-blue-700 text-white',
+    buttonSecondary: 'bg-gray-200 hover:bg-gray-300 text-gray-900'
+  } : {
+    bg: 'bg-gray-900',
+    card: 'bg-gray-800',
+    text: 'text-white',
+    textSecondary: 'text-gray-400',
+    border: 'border-gray-700',
+    input: 'bg-gray-700 border-gray-600 text-white',
+    button: 'bg-blue-600 hover:bg-blue-700 text-white',
+    buttonSecondary: 'bg-gray-700 hover:bg-gray-600 text-white'
+  };
 
-          {!showClockWindow && (
-            <div className={t.card + ' rounded-lg p-6 shadow border ' + t.border}>
-              <h2 className={'text-xl font-semibold mb-4 ' + t.text}>Klok</h2>
-              <Clock />
-            </div>
-          )}
-        </div>
+  // Check user session on mount
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setCurrentUser(session.user);
+        setShowLogin(false);
+        loadUserData(session.user.id);
+      }
+    });
 
-        {showClockWindow && (
-          <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
-            <div className={t.card + ' rounded-lg p-8 shadow-2xl max-w-2xl w-full'}>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className={'text-2xl font-bold ' + t.text}>🕐 Uitzending Klok</h2>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      const url = window.location.href.split('?')[0] + '?clock=true';
-                      window.open(url, '_blank', 'width=800,height=800');
-                    }}
-                    className={t.button + ' px-4 py-2 rounded-lg text-sm'}
-                  >
-                    Open in nieuw venster
-                  </button>
-                  <button
-                    onClick={() => setShowClockWindow(false)}
-                    className={t.buttonSecondary + ' px-4 py-2 rounded-lg'}
-                  >
-                    Sluiten
-                  </button>
-                </div>
-              </div>
-              <Clock />
-              <div className={'text-xs mt-4 ' + t.textSecondary + ' text-center'}>
-                💡 Tip: Klik "Open in nieuw venster" om de klok naar een ander scherm te verplaatsen
-              </div>
-            </div>
-          </div>
-        )}
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        setCurrentUser(session.user);
+        setShowLogin(false);
+        loadUserData(session.user.id);
+      } else {
+        setCurrentUser(null);
+        setShowLogin(true);
+      }
+    });
 
-        {showSettings && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className={t.card + ' rounded-lg w-full max-w-md shadow-2xl'}>
-              <div className={'p-6 border-b ' + t.border}>
-                <h3 className={'text-lg font-bold ' + t.text}>⚙️ Instellingen</h3>
-              </div>
-              
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className={'block text-sm mb-1 ' + t.text}>Naam</label>
-                  <input
-                    type="text"
-                    value={userSettings.name}
-                    onChange={(e) => setUserSettings({...userSettings, name: e.target.value})}
-                    className={'w-full px-3 py-2 rounded border ' + t.input}
-                  />
-                </div>
+    return () => subscription.unsubscribe();
+  }, []);
 
-                <div>
-                  <label className={'block text-sm mb-1 ' + t.text}>Email</label>
-                  <input
-                    type="email"
-                    value={userSettings.email}
-                    onChange={(e) => setUserSettings({...userSettings, email: e.target.value})}
-                    className={'w-full px-3 py-2 rounded border ' + t.input}
-                  />
-                </div>
+  const loadUserData = async (userId) => {
+    // Load runbooks
+    const { data: runbooksData, error: runbooksError } = await supabase
+      .from('runbooks')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
 
-                <div>
-                  <label className={'block text-sm mb-1 ' + t.text}>Nieuw wachtwoord</label>
-                  <input
-                    type="password"
-                    placeholder="Laat leeg om hetzelfde te houden"
-                    onChange={(e) => e.target.value && setUserSettings({...userSettings, password: e.target.value})}
-                    className={'w-full px-3 py-2 rounded border ' + t.input}
-                  />
-                </div>
+    if (!runbooksError && runbooksData) {
+      setRundowns(runbooksData);
+      if (runbooksData.length > 0) {
+        setCurrentRundownId(runbooksData[0].id);
+        loadRunbookItems(runbooksData[0].id);
+      }
+    }
 
-                <div className={'border-t pt-4 ' + t.border}>
-                  <h4 className={'text-sm font-semibold mb-2 ' + t.text}>Spotify API Credentials</h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className={'block text-xs mb-1 ' + t.textSecondary}>Client ID</label>
-                      <input
-                        type="text"
-                        value={spotifyClientId}
-                        onChange={(e) => setSpotifyClientId(e.target.value)}
-                        placeholder="Je Spotify Client ID"
-                        className={'w-full px-3 py-2 rounded border text-sm ' + t.input}
-                      />
-                    </div>
-                    <div>
-                      <label className={'block text-xs mb-1 ' + t.textSecondary}>Client Secret</label>
-                      <input
-                        type="password"
-                        value={spotifyClientSecret}
-                        onChange={(e) => setSpotifyClientSecret(e.target.value)}
-                        placeholder="Je Spotify Client Secret"
-                        className={'w-full px-3 py-2 rounded border text-sm ' + t.input}
-                      />
-                    </div>
-                    <div className={'text-xs p-2 rounded ' + (theme === 'light' ? 'bg-green-50' : 'bg-green-900 bg-opacity-20')}>
-                      💡 Verkrijg credentials op <a href="https://developer.spotify.com/dashboard" target="_blank" className="text-blue-500 underline">developer.spotify.com</a>
-                    </div>
-                  </div>
-                </div>
+    // Load jingles
+    const { data: jinglesData } = await supabase
+      .from('jingles')
+      .select('*')
+      .eq('user_id', userId);
 
-                <div className={'text-xs p-3 rounded ' + (theme === 'light' ? 'bg-blue-50' : 'bg-blue-900 bg-opacity-30')}>
-                  💡 Let op: In de demo versie worden wijzigingen niet permanent opgeslagen
-                </div>
-              </div>
+    if (jinglesData) {
+      setJingles(jinglesData);
+    }
+  };
 
-              <div className={'p-6 border-t flex gap-3 ' + t.border}>
-                <button
-                  onClick={() => setShowSettings(false)}
-                  className={t.button + ' flex-1 px-4 py-2 rounded-lg'}
-                >
-                  Sluiten
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+  const loadRunbookItems = async (runbookId) => {
+    const { data, error } = await supabase
+      .from('items')
+      .select('*')
+      .eq('runbook_id', runbookId)
+      .order('position');
 
-        {showJingleEditor && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className={t.card + ' rounded-lg w-full max-w-md shadow-2xl'}>
-              <div className={'p-6 border-b ' + t.border}>
-                <h3 className={'text-lg font-bold ' + t.text}>🔔 Jingles</h3>
-              </div>
-              
-              <div className="p-6">
-                <div className="space-y-2 mb-4">
-                  {jingles.map(jingle => (
-                    <button
-                      key={jingle.id}
-                      onClick={() => {
-                        addJingle(jingle);
-                        setShowJingleEditor(false);
-                      }}
-                      className={'w-full text-left px-4 py-3 rounded-lg ' + t.buttonSecondary + ' hover:bg-blue-100 dark:hover:bg-blue-900'}
-                    >
-                      <div className={'font-medium ' + t.text}>{jingle.title}</div>
-                      <div className={'text-xs ' + t.textSecondary}>Duur: {formatTimeShort(jingle.duration)}</div>
-                    </button>
-                  ))}
-                </div>
+    if (!error && data) {
+      setItems(data);
+    }
+  };
 
-                <div className={'text-xs p-3 rounded ' + (theme === 'light' ? 'bg-gray-100' : 'bg-gray-700')}>
-                  💡 Later kun je hier jingles toevoegen en aanpassen
-                </div>
-              </div>
+  useEffect(() => {
+    if (currentRundownId) {
+      loadRunbookItems(currentRundownId);
+    }
+  }, [currentRundownId]);
 
-              <div className={'p-6 border-t flex gap-3 ' + t.border}>
-                <button
-                  onClick={() => setShowJingleEditor(false)}
-                  className={t.buttonSecondary + ' flex-1 px-4 py-2 rounded-lg'}
-                >
-                  Sluiten
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+  // Auth functions
+  const handleLogin = async () => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: loginForm.email,
+      password: loginForm.password
+    });
 
-        {showPrintModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className={t.card + ' p-6 rounded-lg w-96 shadow-2xl'}>
-              <h3 className={'text-lg font-bold mb-4 ' + t.text}>Printen</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="flex items-center mb-2">
-                    <input
-                      type="radio"
-                      checked={printMode === 'rundown'}
-                      onChange={() => setPrintMode('rundown')}
-                      className="mr-2"
-                    />
-                    <span className={t.text}>Rundown (kort)</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      checked={printMode === 'full'}
-                      onChange={() => setPrintMode('full')}
-                      className="mr-2"
-                    />
-                    <span className={t.text}>Volledig draaiboek</span>
-                  </label>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={printRundown}
-                    className={t.button + ' px-4 py-2 rounded flex-1'}
-                  >
-                    📄 Download TXT
-                  </button>
-                  <button
-                    onClick={() => setShowPrintModal(false)}
-                    className={t.buttonSecondary + ' px-4 py-2 rounded flex-1'}
-                  >
-                    Annuleren
-                  </button>
-                </div>
-                
-                <div className={'text-xs mt-3 p-3 rounded ' + (theme === 'light' ? 'bg-gray-100' : 'bg-gray-700')}>
-                  💡 Het bestand wordt gedownload als .txt. Open het in Word om te converteren naar PDF of DOCX.
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+    if (error) {
+      alert('Login mislukt: ' + error.message);
+    }
+  };
 
-      {showAddForm && (
-        <ItemForm
-          onSave={addItem}
-          onCancel={() => setShowAddForm(false)}
-        />
-      )}
-      
-      {editingItem && (
-        <ItemForm
-          item={editingItem}
-          onSave={(updated) => updateItem(editingItem.id, updated)}
-          onCancel={() => setEditingItem(null)}
-        />
-      )}
-    </div>
-  );
-};
+  const handleRegister = async () => {
+    const { data, error } = await supabase.auth.signUp({
+      email: loginForm.email,
+      password: loginForm.password,
+      options: {
+        data: {
+          name: loginForm.name
+        }
+      }
+    });
 
-export default RadioRundownPro;
+    if (error) {
+      alert('Registratie mislukt: ' + error.message);
+    } else {
+      alert('Account aangemaakt! Je kunt nu inloggen.');
+      setIsRegistering(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  // Runbook functions
+  const createNewRunbook = async () => {
+    if (!currentUser) return;
+
+    const { data, error } = await supabase
+      .from('runbooks')
+      .insert([{
+        user_id: currentUser.id,
+        name: 'Nieuw Draaiboek',
+        date: new Date().toISOString().split('T')[0]
+      }])
+      .select();
+
+    if (!error && data) {
+      setRundowns([data[0], ...rundowns]);
+      setCurrentRundownId(data[0].id);
+    }
+  };
+
+  const duplicateRunbook = async (runbookId) => {
+    const original = rundowns.find(r => r.id === runbookId);
+    if (!original) return;
+
+    const { data: newRunbook, error: runbookError } = await supabase
+      .from('runbooks')
+      .insert([{
+        user_id: currentUser.id,
+        name: original.name + ' (kopie)',
+        date: new Date().toISOString().split('T')[0]
+      }])
+      .select();
+
+    if (runbookError || !newRunbook) return;
+
+    // Copy items
+    const { data: originalItems } = await supabase
+      .from('items')
+      .select('*')
+      .eq('runbook_id', runbookId);
+
+    if (originalItems && originalItems.length > 0) {
+      const itemsCopy = originalItems.map(item => ({
+        ...item,
+        id: undefined,
+        runbook_id: newRunbook[0].id
+      }));
+
+      await supabase.from('items').insert(itemsCopy);
+    }
+
+    setRundowns([newRunbook[0], ...rundowns]);
+  };
+
+  const deleteRunbook = async (runbookId) => {
+    await supabase.from('runbooks').delete().eq('id', runbookId);
+    const updated = rundowns.filter(r => r.id !== runbookId);
+    setRundowns(updated);
+    if (currentRundownId === runbookId && updated.length > 0) {
+      setCurrentRundownId(updated[0].id);
+    }
+  };
+
+  const renameRunbook = async (runbookId, newName) => {
+    await supabase
+      .from('runbooks')
+      .update({ name: newName })
+      .eq('id', runbookId);
+
+    setRundowns(rundowns.map(r => r.id === runbookId ? { ...r, name: newName } : r));
+  };
+
+  // Item functions
+  const addItem = async (item) => {
+    if (!currentRundownId) return;
+
+    const position = items.length;
+    const { data, error } = await supabase
+      .from('items')
+      .insert([{
+        runbook_id: currentRundownId,
+        ...item,
+        position
+      }])
+      .select();
+
+    if (!error && data) {
+      setItems([...items, data[0]]);
+    }
+    setShowAddForm(false);
+  };
+
+  const updateItem = async (id, updated) => {
+    await supabase
+      .from('items')
+      .update(updated)
+      .eq('id', id);
+
+    setItems(items.map(item => item.id === id ? { ...item, ...updated } : item));
+    setEditingItem(null);
+  };
+
+  const deleteItem = async (id) => {
+    await supabase.from('items').delete().eq('id', id);

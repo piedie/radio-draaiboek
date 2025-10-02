@@ -467,273 +467,283 @@ const RadioRundownPro = () => {
     );
   };
 
-  if (showLogin) {
-    return (
-      <div className={t.bg + ' min-h-screen flex items-center justify-center p-4'}>
-        <div className={t.card + ' rounded-lg shadow-xl p-8 w-full max-w-md border ' + t.border}>
-          <h1 className={t.text + ' text-3xl font-bold mb-2 text-center'}>📻 Radio Rundown Pro</h1>
-          <p className={t.textSecondary + ' text-center mb-8'}>Professioneel draaiboek beheer</p>
-          <div className="space-y-4">{isRegistering && (
+  useEffect(() => {
+    const openClockWindow = () => {
+      const win = window.open('', 'Klok', 'width=400,height=400');
+      if (win) {
+        win.document.write('<!DOCTYPE html><html><head><title>Klok</title><meta name="viewport" content="width=400,initial-scale=1" /></head><body style="margin:0;background:#111;color:#fff;font-family:sans-serif;"><div id="clock-root"></div></body></html>');
+        // Je kunt hier eventueel een eenvoudige klok tonen
+      }
+    };
+
+    if (showLogin) {
+      return (
+        <div className={t.bg + ' min-h-screen flex items-center justify-center p-4'}>
+          <div className={t.card + ' rounded-lg shadow-xl p-8 w-full max-w-md border ' + t.border}>
+            <h1 className={t.text + ' text-3xl font-bold mb-2 text-center'}>📻 Radio Rundown Pro</h1>
+            <p className={t.textSecondary + ' text-center mb-8'}>Professioneel draaiboek beheer</p>
+            <div className="space-y-4">{isRegistering && (
+                <div>
+                  <label className={'block text-sm font-medium ' + t.text + ' mb-1'}>Naam</label>
+                  <input type="text" value={loginForm.name} onChange={(e) => setLoginForm({...loginForm, name: e.target.value})} className={'w-full ' + t.input + ' rounded px-3 py-2 border'} />
+                </div>
+              )}
               <div>
-                <label className={'block text-sm font-medium ' + t.text + ' mb-1'}>Naam</label>
-                <input type="text" value={loginForm.name} onChange={(e) => setLoginForm({...loginForm, name: e.target.value})} className={'w-full ' + t.input + ' rounded px-3 py-2 border'} />
+                <label className={'block text-sm font-medium ' + t.text + ' mb-1'}>Email</label>
+                <input type="email" value={loginForm.email} onChange={(e) => setLoginForm({...loginForm, email: e.target.value})} className={'w-full ' + t.input + ' rounded px-3 py-2 border'} />
               </div>
-            )}
-            <div>
-              <label className={'block text-sm font-medium ' + t.text + ' mb-1'}>Email</label>
-              <input type="email" value={loginForm.email} onChange={(e) => setLoginForm({...loginForm, email: e.target.value})} className={'w-full ' + t.input + ' rounded px-3 py-2 border'} />
-            </div>
-            <div>
-              <label className={'block text-sm font-medium ' + t.text + ' mb-1'}>Wachtwoord</label>
-              <input type="password" value={loginForm.password} onChange={(e) => setLoginForm({...loginForm, password: e.target.value})} className={'w-full ' + t.input + ' rounded px-3 py-2 border'} onKeyPress={(e) => e.key === 'Enter' && (isRegistering ? handleRegister() : handleLogin())} />
-            </div>
-            <button onClick={isRegistering ? handleRegister : handleLogin} className={'w-full ' + t.button + ' px-4 py-3 rounded-lg font-medium'}>{isRegistering ? 'Account aanmaken' : 'Inloggen'}</button>
-            <button onClick={() => setIsRegistering(!isRegistering)} className={'w-full ' + t.buttonSecondary + ' px-4 py-3 rounded-lg font-medium'}>{isRegistering ? 'Al een account? Inloggen' : 'Nog geen account? Registreren'}</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const currentRunbook = rundowns.find(r => r.id === currentRundownId);
-
-  return (
-    <div className={t.bg + ' min-h-screen p-6'}>
-      <div className="max-w-7xl mx-auto">
-        <div className={t.card + ' rounded-lg p-6 mb-6 shadow border ' + t.border}>
-          <div className="flex justify-between mb-4">
-            <div className="flex items-center gap-4">
-              {editingRunbookName === currentRundownId ? (
-                <input type="text" value={currentRunbook ? currentRunbook.name : ''} onChange={(e) => renameRunbook(currentRundownId, e.target.value)} onBlur={() => setEditingRunbookName(null)} onKeyPress={(e) => e.key === 'Enter' && setEditingRunbookName(null)} className={'text-2xl font-bold px-2 py-1 rounded border ' + t.input} autoFocus />
-              ) : (
-                <h1 className={'text-2xl font-bold cursor-pointer hover:underline ' + t.text} onClick={() => setEditingRunbookName(currentRundownId)}>📻 {currentRunbook ? currentRunbook.name : 'Draaiboek'}</h1>
-              )}
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} className={t.buttonSecondary + ' p-2 rounded-lg'}>{theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}</button>
-              <button onClick={handleLogout} className={t.buttonSecondary + ' px-4 py-2 rounded-lg flex items-center gap-2'}><LogOut size={16} />{currentUser?.email}</button>
-            </div>
-          </div>
-          <div className="flex gap-2 flex-wrap mb-3">
-            <button onClick={() => setShowRundownSelector(!showRundownSelector)} className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2'}><FolderOpen size={16} />Draaiboeken</button>
-            <button onClick={createNewRunbook} className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2'}><Plus size={16} />Nieuw</button>
-            <button onClick={() => setShowClock(!showClock)} className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2 text-sm'}>{showClock ? 'Verberg Klok' : 'Toon Klok'}</button>
-            <button onClick={openClockWindow} className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2 text-sm'}>🕐 Klok in venster</button>
-            <button onClick={() => setShowPrintModal(true)} className={t.buttonSecondary + ' px-3 py-2 rounded-lg text-sm'}>🖨️ Print</button>
-            <button onClick={() => setExpandedItems(new Set(items.map(i => i.id)))} className={t.buttonSecondary + ' px-3 py-2 rounded-lg text-sm'}>⬇️ Alles uit</button>
-            <button onClick={() => setExpandedItems(new Set())} className={t.buttonSecondary + ' px-3 py-2 rounded-lg text-sm'}>⬆️ Alles in</button>
-            <button onClick={() => setShowSettings(!showSettings)} className={t.buttonSecondary + ' px-4 py-2 rounded-lg flex items-center gap-2'}>⚙️ Instellingen</button>
-          </div>
-          <div className={'border-t pt-3 mb-2 ' + t.border}>
-            <div className={'text-xs font-semibold mb-2 ' + t.textSecondary}>ITEMS TOEVOEGEN:</div>
-            <div className="flex gap-2 flex-wrap">
-              <button onClick={() => quickAdd('music')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>🎵 Muziek</button>
-              <button onClick={() => quickAdd('talk')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>🎙️ Presentatie</button>
-              <button onClick={() => quickAdd('reportage')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>⭐ Reportage</button>
-              <button onClick={() => quickAdd('live')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>📡 Live</button>
-              <button onClick={() => quickAdd('game')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>🎮 Spel</button>
-              {itemTypes.map((type, idx) => (
-                <button key={idx} onClick={() => quickAdd(type)} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>{type.name}</button>
-              ))}
+              <div>
+                <label className={'block text-sm font-medium ' + t.text + ' mb-1'}>Wachtwoord</label>
+                <input type="password" value={loginForm.password} onChange={(e) => setLoginForm({...loginForm, password: e.target.value})} className={'w-full ' + t.input + ' rounded px-3 py-2 border'} onKeyPress={(e) => e.key === 'Enter' && (isRegistering ? handleRegister() : handleLogin())} />
+              </div>
+              <button onClick={isRegistering ? handleRegister : handleLogin} className={'w-full ' + t.button + ' px-4 py-3 rounded-lg font-medium'}>{isRegistering ? 'Account aanmaken' : 'Inloggen'}</button>
+              <button onClick={() => setIsRegistering(!isRegistering)} className={'w-full ' + t.buttonSecondary + ' px-4 py-3 rounded-lg font-medium'}>{isRegistering ? 'Al een account? Inloggen' : 'Nog geen account? Registreren'}</button>
             </div>
           </div>
         </div>
+      );
+    }
 
-        {showRundownSelector && (
-          <div className={t.card + ' rounded-lg p-4 mb-6 shadow border ' + t.border}>
-            <h3 className={'font-bold mb-3 ' + t.text}>Mijn Draaiboeken</h3>
-            <div className="space-y-2">
-              {rundowns.map(rb => (
-                <div key={rb.id} className={'flex justify-between p-3 rounded ' + (rb.id === currentRundownId ? 'bg-blue-100 dark:bg-blue-900' : t.buttonSecondary)}>
-                  <button onClick={() => { setCurrentRundownId(rb.id); setShowRundownSelector(false); }} className="flex-1 text-left">
-                    <div className={'font-medium ' + t.text}>{rb.name}</div>
-                    <div className={'text-sm ' + t.textSecondary}>{rb.date}</div>
-                  </button>
-                  <div className="flex gap-2">
-                    <button onClick={() => duplicateRunbook(rb.id)} className={t.buttonSecondary + ' p-2 rounded'}><Copy size={16} /></button>
-                    <button onClick={() => deleteRunbook(rb.id)} className={t.buttonSecondary + ' p-2 rounded hover:bg-red-100'}><Trash2 size={16} /></button>
-                  </div>
-                </div>
-              ))}
+    const currentRunbook = rundowns.find(r => r.id === currentRundownId);
+
+    return (
+      <div className={t.bg + ' min-h-screen p-6'}>
+        <div className="max-w-7xl mx-auto">
+          <div className={t.card + ' rounded-lg p-6 mb-6 shadow border ' + t.border}>
+            <div className="flex justify-between mb-4">
+              <div className="flex items-center gap-4">
+                {editingRunbookName === currentRundownId ? (
+                  <input type="text" value={currentRunbook ? currentRunbook.name : ''} onChange={(e) => renameRunbook(currentRundownId, e.target.value)} onBlur={() => setEditingRunbookName(null)} onKeyPress={(e) => e.key === 'Enter' && setEditingRunbookName(null)} className={'text-2xl font-bold px-2 py-1 rounded border ' + t.input} autoFocus />
+                ) : (
+                  <h1 className={'text-2xl font-bold cursor-pointer hover:underline ' + t.text} onClick={() => setEditingRunbookName(currentRundownId)}>📻 {currentRunbook ? currentRunbook.name : 'Draaiboek'}</h1>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} className={t.buttonSecondary + ' p-2 rounded-lg'}>{theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}</button>
+                <button onClick={handleLogout} className={t.buttonSecondary + ' px-4 py-2 rounded-lg flex items-center gap-2'}><LogOut size={16} />{currentUser?.email}</button>
+              </div>
+            </div>
+            <div className="flex gap-2 flex-wrap mb-3">
+              <button onClick={() => setShowRundownSelector(!showRundownSelector)} className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2'}><FolderOpen size={16} />Draaiboeken</button>
+              <button onClick={createNewRunbook} className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2'}><Plus size={16} />Nieuw</button>
+              <button onClick={() => setShowClock(!showClock)} className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2 text-sm'}>{showClock ? 'Verberg Klok' : 'Toon Klok'}</button>
+              <button onClick={openClockWindow} className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2 text-sm'}>🕐 Klok in venster</button>
+              <button onClick={() => setShowPrintModal(true)} className={t.buttonSecondary + ' px-3 py-2 rounded-lg text-sm'}>🖨️ Print</button>
+              <button onClick={() => setExpandedItems(new Set(items.map(i => i.id)))} className={t.buttonSecondary + ' px-3 py-2 rounded-lg text-sm'}>⬇️ Alles uit</button>
+              <button onClick={() => setExpandedItems(new Set())} className={t.buttonSecondary + ' px-3 py-2 rounded-lg text-sm'}>⬆️ Alles in</button>
+              <button onClick={() => setShowSettings(!showSettings)} className={t.buttonSecondary + ' px-4 py-2 rounded-lg flex items-center gap-2'}>⚙️ Instellingen</button>
+            </div>
+            <div className={'border-t pt-3 mb-2 ' + t.border}>
+              <div className={'text-xs font-semibold mb-2 ' + t.textSecondary}>ITEMS TOEVOEGEN:</div>
+              <div className="flex gap-2 flex-wrap">
+                <button onClick={() => quickAdd('music')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>🎵 Muziek</button>
+                <button onClick={() => quickAdd('talk')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>🎙️ Presentatie</button>
+                <button onClick={() => quickAdd('reportage')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>⭐ Reportage</button>
+                <button onClick={() => quickAdd('live')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>📡 Live</button>
+                <button onClick={() => quickAdd('game')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>🎮 Spel</button>
+                {itemTypes.map((type, idx) => (
+                  <button key={idx} onClick={() => quickAdd(type)} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>{type.name}</button>
+                ))}
+              </div>
             </div>
           </div>
-        )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className={(!showClock && !showClockWindow ? 'col-span-2 ' : '') + t.card + ' rounded-lg p-6 shadow border ' + t.border}>
-            <h2 className={'text-xl font-semibold mb-4 ' + t.text}>Rundown</h2>
-            <div className="space-y-2">
-              {items.length === 0 ? (
-                <div className={'text-center py-12 ' + t.textSecondary}>
-                  <Music size={48} className="mx-auto mb-4 opacity-50" />
-                  <p>Nog geen items</p>
-                </div>
-              ) : (
-                items.map((item, idx) => {
-                  const isExpanded = expandedItems.has(item.id);
-                  const isDragOver = dragOverIndex === idx;
-                  return (
-                    <div key={item.id} draggable onDragStart={(e) => handleDragStart(e, item, idx)} onDragOver={(e) => handleDragOver(e, idx)} onDrop={(e) => handleDrop(e, idx)} className={'rounded-lg p-4 border cursor-move ' + t.card + ' ' + t.border + (isDragOver ? ' border-t-4 border-t-blue-500' : '')}>
-                      <div className="flex justify-between">
-                        <div className="flex gap-3 flex-1">
-                          <GripVertical size={16} className={t.textSecondary} />
-                          <div style={{ color: item.color }}>{getIcon(item.type)}</div>
-                          <div className="flex-1 cursor-pointer" onClick={() => toggleExpanded(item.id)}>
-                            <div className={'font-medium ' + t.text}>{item.title}</div>
-                            {item.artist && <div className={'text-sm ' + t.textSecondary}>{item.artist}</div>}
-                            {(item.first_words || item.last_words || item.connection_type) && (
-                              <div className={'text-xs mt-1 ' + t.textSecondary}>
-                                {item.first_words && <span>EW: {item.first_words.substring(0, 40)}{item.first_words.length > 40 ? '...' : ''}</span>}
-                                {item.first_words && item.last_words && <span className="mx-1">|</span>}
-                                {item.last_words && <span>LW: {item.last_words.substring(0, 40)}{item.last_words.length > 40 ? '...' : ''}</span>}
-                                {item.connection_type && (
-                                  <div className="mt-1">
-                                    <span className="font-semibold">Verbinding: {item.connection_type}</span>
-                                    {item.connection_type === 'Telefoon' && item.phone_number && <span> ({item.phone_number})</span>}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex gap-3">
-                          <div className="text-right">
-                            <div className={'text-sm font-mono ' + t.text}>{formatTimeShort(item.duration)}</div>
-                            <div className={'text-xs font-mono ' + t.textSecondary}>tot {formatTime(getCumulativeTime(idx))}</div>
-                          </div>
-                          <button onClick={() => setEditingItem(item)} className={t.textSecondary}><Edit2 size={16} /></button>
-                          <button onClick={() => deleteItem(item.id)} className={t.textSecondary + ' hover:text-red-500'}><Trash2 size={16} /></button>
-                        </div>
-                      </div>
-                      {isExpanded && (item.first_words || item.notes || item.last_words) && (
-                        <div className={'mt-3 pt-3 border-t ' + t.border}>
-                          <div className={'text-sm p-3 rounded ' + (theme === 'light' ? 'bg-gray-50' : 'bg-gray-900')}>
-                            {item.first_words && (
-                              <div className="mb-3 p-2 bg-green-100 dark:bg-green-900 bg-opacity-30 rounded">
-                                <div className="text-xs text-green-600 dark:text-green-400 mb-1 font-semibold">EERSTE WOORDEN:</div>
-                                <div>{item.first_words}</div>
-                              </div>
-                            )}
-                            {item.notes && (
-                              <div className="mb-3">
-                                <div className={'text-xs mb-1 font-semibold ' + t.textSecondary}>HOOFDTEKST:</div>
-                                <div>{item.notes}</div>
-                              </div>
-                            )}
-                            {item.last_words && (
-                              <div className="p-2 bg-blue-100 dark:bg-blue-900 bg-opacity-30 rounded">
-                                <div className="text-xs text-blue-600 dark:text-blue-400 mb-1 font-semibold">LAATSTE WOORDEN:</div>
-                                <div>{item.last_words}</div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
+          {showRundownSelector && (
+            <div className={t.card + ' rounded-lg p-4 mb-6 shadow border ' + t.border}>
+              <h3 className={'font-bold mb-3 ' + t.text}>Mijn Draaiboeken</h3>
+              <div className="space-y-2">
+                {rundowns.map(rb => (
+                  <div key={rb.id} className={'flex justify-between p-3 rounded ' + (rb.id === currentRundownId ? 'bg-blue-100 dark:bg-blue-900' : t.buttonSecondary)}>
+                    <button onClick={() => { setCurrentRundownId(rb.id); setShowRundownSelector(false); }} className="flex-1 text-left">
+                      <div className={'font-medium ' + t.text}>{rb.name}</div>
+                      <div className={'text-sm ' + t.textSecondary}>{rb.date}</div>
+                    </button>
+                    <div className="flex gap-2">
+                      <button onClick={() => duplicateRunbook(rb.id)} className={t.buttonSecondary + ' p-2 rounded'}><Copy size={16} /></button>
+                      <button onClick={() => deleteRunbook(rb.id)} className={t.buttonSecondary + ' p-2 rounded hover:bg-red-100'}><Trash2 size={16} /></button>
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {showClock && !showClockWindow && (
-            <div className={t.card + ' rounded-lg p-6 shadow border ' + t.border}>
-              <h2 className={'text-xl font-semibold mb-4 ' + t.text}>Klok</h2>
-              <Clock
-                items={items}
-                currentTime={currentTime}
-                isPlaying={isPlaying}
-                setIsPlaying={setIsPlaying}
-                theme={theme}
-                t={t}
-                formatTime={formatTime}
-                formatTimeShort={formatTimeShort}
-                totalDuration={totalDuration}
-              />
+                  </div>
+                ))}
+              </div>
             </div>
           )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className={(!showClock && !showClockWindow ? 'col-span-2 ' : '') + t.card + ' rounded-lg p-6 shadow border ' + t.border}>
+              <h2 className={'text-xl font-semibold mb-4 ' + t.text}>Rundown</h2>
+              <div className="space-y-2">
+                {items.length === 0 ? (
+                  <div className={'text-center py-12 ' + t.textSecondary}>
+                    <Music size={48} className="mx-auto mb-4 opacity-50" />
+                    <p>Nog geen items</p>
+                  </div>
+                ) : (
+                  items.map((item, idx) => {
+                    const isExpanded = expandedItems.has(item.id);
+                    const isDragOver = dragOverIndex === idx;
+                    return (
+                      <div key={item.id} draggable onDragStart={(e) => handleDragStart(e, item, idx)} onDragOver={(e) => handleDragOver(e, idx)} onDrop={(e) => handleDrop(e, idx)} className={'rounded-lg p-4 border cursor-move ' + t.card + ' ' + t.border + (isDragOver ? ' border-t-4 border-t-blue-500' : '')}>
+                        <div className="flex justify-between">
+                          <div className="flex gap-3 flex-1">
+                            <GripVertical size={16} className={t.textSecondary} />
+                            <div style={{ color: item.color }}>{getIcon(item.type)}</div>
+                            <div className="flex-1 cursor-pointer" onClick={() => toggleExpanded(item.id)}>
+                              <div className={'font-medium ' + t.text}>{item.title}</div>
+                              {item.artist && <div className={'text-sm ' + t.textSecondary}>{item.artist}</div>}
+                              {(item.first_words || item.last_words || item.connection_type) && (
+                                <div className={'text-xs mt-1 ' + t.textSecondary}>
+                                  {item.first_words && <span>EW: {item.first_words.substring(0, 40)}{item.first_words.length > 40 ? '...' : ''}</span>}
+                                  {item.first_words && item.last_words && <span className="mx-1">|</span>}
+                                  {item.last_words && <span>LW: {item.last_words.substring(0, 40)}{item.last_words.length > 40 ? '...' : ''}</span>}
+                                  {item.connection_type && (
+                                    <div className="mt-1">
+                                      <span className="font-semibold">Verbinding: {item.connection_type}</span>
+                                      {item.connection_type === 'Telefoon' && item.phone_number && <span> ({item.phone_number})</span>}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex gap-3">
+                            <div className="text-right">
+                              <div className={'text-sm font-mono ' + t.text}>{formatTimeShort(item.duration)}</div>
+                              <div className={'text-xs font-mono ' + t.textSecondary}>tot {formatTime(getCumulativeTime(idx))}</div>
+                            </div>
+                            <button onClick={() => setEditingItem(item)} className={t.textSecondary}><Edit2 size={16} /></button>
+                            <button onClick={() => deleteItem(item.id)} className={t.textSecondary + ' hover:text-red-500'}><Trash2 size={16} /></button>
+                          </div>
+                        </div>
+                        {isExpanded && (item.first_words || item.notes || item.last_words) && (
+                          <div className={'mt-3 pt-3 border-t ' + t.border}>
+                            <div className={'text-sm p-3 rounded ' + (theme === 'light' ? 'bg-gray-50' : 'bg-gray-900')}>
+                              {item.first_words && (
+                                <div className="mb-3 p-2 bg-green-100 dark:bg-green-900 bg-opacity-30 rounded">
+                                  <div className="text-xs text-green-600 dark:text-green-400 mb-1 font-semibold">EERSTE WOORDEN:</div>
+                                  <div>{item.first_words}</div>
+                                </div>
+                              )}
+                              {item.notes && (
+                                <div className="mb-3">
+                                  <div className={'text-xs mb-1 font-semibold ' + t.textSecondary}>HOOFDTEKST:</div>
+                                  <div>{item.notes}</div>
+                                </div>
+                              )}
+                              {item.last_words && (
+                                <div className="p-2 bg-blue-100 dark:bg-blue-900 bg-opacity-30 rounded">
+                                  <div className="text-xs text-blue-600 dark:text-blue-400 mb-1 font-semibold">LAATSTE WOORDEN:</div>
+                                  <div>{item.last_words}</div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {showClock && !showClockWindow && (
+              <div className={t.card + ' rounded-lg p-6 shadow border ' + t.border}>
+                <h2 className={'text-xl font-semibold mb-4 ' + t.text}>Klok</h2>
+                <Clock
+                  items={items}
+                  currentTime={currentTime}
+                  isPlaying={isPlaying}
+                  setIsPlaying={setIsPlaying}
+                  theme={theme}
+                  t={t}
+                  formatTime={formatTime}
+                  formatTimeShort={formatTimeShort}
+                  totalDuration={totalDuration}
+                />
+              </div>
+            )}
+          </div>
+
+          {showClockWindow && (
+            <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+              <div className={t.card + ' rounded-lg p-8 shadow-2xl max-w-2xl w-full'}>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className={'text-2xl font-bold ' + t.text}>🕐 Uitzending Klok</h2>
+                  <button onClick={() => setShowClockWindow(false)} className={t.buttonSecondary + ' px-4 py-2 rounded-lg'}>Sluiten</button>
+                </div>
+                <Clock />
+              </div>
+            </div>
+          )}
+
+          {showJingleEditor && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className={t.card + ' rounded-lg w-full max-w-md shadow-2xl'}>
+                <div className={'p-6 border-b ' + t.border}>
+                  <h3 className={'text-lg font-bold ' + t.text}>🔔 Jingles</h3>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-2 mb-4">
+                    {jingles.map(jingle => (
+                      <button key={jingle.id} onClick={() => { addJingle(jingle); setShowJingleEditor(false); }} className={'w-full text-left px-4 py-3 rounded-lg ' + t.buttonSecondary + ' hover:bg-blue-100 dark:hover:bg-blue-900'}>
+                        <div className={'font-medium ' + t.text}>{jingle.title}</div>
+                        <div className={'text-xs ' + t.textSecondary}>Duur: {formatTimeShort(jingle.duration)}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className={'p-6 border-t flex gap-3 ' + t.border}>
+                  <button onClick={() => setShowJingleEditor(false)} className={t.buttonSecondary + ' flex-1 px-4 py-2 rounded-lg'}>Sluiten</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showPrintModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className={t.card + ' p-6 rounded-lg w-96 shadow-2xl'}>
+                <h3 className={'text-lg font-bold mb-4 ' + t.text}>Printen</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="flex items-center mb-2">
+                      <input type="radio" checked={printMode === 'rundown'} onChange={() => setPrintMode('rundown')} className="mr-2" />
+                      <span className={t.text}>Rundown (kort)</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input type="radio" checked={printMode === 'full'} onChange={() => setPrintMode('full')} className="mr-2" />
+                      <span className={t.text}>Volledig draaiboek</span>
+                    </label>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={printRundown} className={t.button + ' px-4 py-2 rounded flex-1'}>📄 Download TXT</button>
+                    <button onClick={() => setShowPrintModal(false)} className={t.buttonSecondary + ' px-4 py-2 rounded flex-1'}>Annuleren</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showSettings && <ItemTypesSettings itemTypes={itemTypes} setItemTypes={setItemTypes} t={t} />}
+
         </div>
 
-        {showClockWindow && (
-          <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
-            <div className={t.card + ' rounded-lg p-8 shadow-2xl max-w-2xl w-full'}>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className={'text-2xl font-bold ' + t.text}>🕐 Uitzending Klok</h2>
-                <button onClick={() => setShowClockWindow(false)} className={t.buttonSecondary + ' px-4 py-2 rounded-lg'}>Sluiten</button>
-              </div>
-              <Clock />
-            </div>
-          </div>
-        )}
-
-        {showJingleEditor && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className={t.card + ' rounded-lg w-full max-w-md shadow-2xl'}>
-              <div className={'p-6 border-b ' + t.border}>
-                <h3 className={'text-lg font-bold ' + t.text}>🔔 Jingles</h3>
-              </div>
-              <div className="p-6">
-                <div className="space-y-2 mb-4">
-                  {jingles.map(jingle => (
-                    <button key={jingle.id} onClick={() => { addJingle(jingle); setShowJingleEditor(false); }} className={'w-full text-left px-4 py-3 rounded-lg ' + t.buttonSecondary + ' hover:bg-blue-100 dark:hover:bg-blue-900'}>
-                      <div className={'font-medium ' + t.text}>{jingle.title}</div>
-                      <div className={'text-xs ' + t.textSecondary}>Duur: {formatTimeShort(jingle.duration)}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className={'p-6 border-t flex gap-3 ' + t.border}>
-                <button onClick={() => setShowJingleEditor(false)} className={t.buttonSecondary + ' flex-1 px-4 py-2 rounded-lg'}>Sluiten</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showPrintModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className={t.card + ' p-6 rounded-lg w-96 shadow-2xl'}>
-              <h3 className={'text-lg font-bold mb-4 ' + t.text}>Printen</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="flex items-center mb-2">
-                    <input type="radio" checked={printMode === 'rundown'} onChange={() => setPrintMode('rundown')} className="mr-2" />
-                    <span className={t.text}>Rundown (kort)</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input type="radio" checked={printMode === 'full'} onChange={() => setPrintMode('full')} className="mr-2" />
-                    <span className={t.text}>Volledig draaiboek</span>
-                  </label>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={printRundown} className={t.button + ' px-4 py-2 rounded flex-1'}>📄 Download TXT</button>
-                  <button onClick={() => setShowPrintModal(false)} className={t.buttonSecondary + ' px-4 py-2 rounded flex-1'}>Annuleren</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showSettings && <ItemTypesSettings itemTypes={itemTypes} setItemTypes={setItemTypes} t={t} />}
-
+        {showAddForm && <ItemForm
+          onSave={addItem}
+          onCancel={() => setShowAddForm(false)}
+          t={t}
+          formatTimeShort={formatTimeShort}
+          parseTimeInput={parseTimeInput}
+          isSearchingSpotify={isSearchingSpotify}
+          handleSearch={handleSpotifySearch}
+          localResults={localResults}
+          showLocal={showLocal}
+          selectResult={selectSpotifyResult}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+        />}
+        {editingItem && <ItemForm item={editingItem} onSave={(updated) => updateItem(editingItem.id, updated)} onCancel={() => setEditingItem(null)} />}
       </div>
-
-      {showAddForm && <ItemForm
-        onSave={addItem}
-        onCancel={() => setShowAddForm(false)}
-        t={t}
-        formatTimeShort={formatTimeShort}
-        parseTimeInput={parseTimeInput}
-        isSearchingSpotify={isSearchingSpotify}
-        handleSearch={handleSpotifySearch}
-        localResults={localResults}
-        showLocal={showLocal}
-        selectResult={selectSpotifyResult}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-      />}
-      {editingItem && <ItemForm item={editingItem} onSave={(updated) => updateItem(editingItem.id, updated)} onCancel={() => setEditingItem(null)} />}
-    </div>
-  );
+    );
+  };
 };
 
 export default RadioRundownPro;

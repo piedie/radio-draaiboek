@@ -18,6 +18,9 @@ const ItemTypesSettings = ({ itemTypes, setItemTypes, t }) => {
     setItemTypes(itemTypes.filter((_, i) => i !== idx));
   };
 
+  // Fix: check of itemTypes een array is, anders default leeg array
+  const safeItemTypes = Array.isArray(itemTypes) ? itemTypes : [];
+
   return (
     <div className={t.card + ' rounded-lg p-6 shadow border ' + t.border}>
       <h2 className={'text-xl font-semibold mb-4 ' + t.text}>Eigen Item Types</h2>
@@ -36,7 +39,7 @@ const ItemTypesSettings = ({ itemTypes, setItemTypes, t }) => {
         <button onClick={addType} className={t.button + ' px-4 py-2 rounded'}>Toevoegen</button>
       </div>
       <ul>
-        {itemTypes.map((type, idx) => (
+        {safeItemTypes.map((type, idx) => (
           <li key={idx} className="flex items-center gap-2 mb-2">
             <span style={{ background: type.color, width: 20, height: 20, display: 'inline-block', borderRadius: 4 }}></span>
             <span className={t.text}>{type.name}</span>

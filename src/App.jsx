@@ -35,6 +35,12 @@ const RadioRundownPro = () => {
   const [showJingleEditor, setShowJingleEditor] = useState(false);
   const [jingles, setJingles] = useState([]);
   const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
+  const [showClock, setShowClock] = useState(true);
+
+  const customTemplates = [
+    { key: 'interview', label: '🎤 Interview', item: { type: 'talk', title: 'Interview', duration: 300, color: '#22c55e' } },
+    { key: 'jingle1', label: '🔔 Jingle 1', item: { type: 'jingle', title: 'Jingle 1', duration: 10, color: '#3b82f6' } },
+  ];
 
   const t = theme === 'light' ? {
     bg: 'bg-gray-50', card: 'bg-white', text: 'text-gray-900', textSecondary: 'text-gray-600',
@@ -181,7 +187,11 @@ const RadioRundownPro = () => {
     setDragOverIndex(null);
   };
 
-  const quickAdd = (type) => {
+  const quickAdd = (typeOrItem) => {
+    if (typeof typeOrItem === 'object') {
+      addItem(typeOrItem);
+      return;
+    }
     const templates = {
       music: { type: 'music', title: 'Nieuw nummer', artist: '', duration: 180, color: '#ef4444' },
       talk: { type: 'talk', title: 'Presentatie', duration: 120, color: '#22c55e' },
@@ -189,7 +199,7 @@ const RadioRundownPro = () => {
       live: { type: 'live', title: 'Live', duration: 300, color: '#8b5cf6' },
       game: { type: 'game', title: 'Spel', duration: 240, color: '#f59e0b' }
     };
-    if (templates[type]) addItem(templates[type]);
+    if (templates[typeOrItem]) addItem(templates[typeOrItem]);
   };
 
   const addJingle = async (jingle) => { addItem({ type: 'jingle', title: jingle.title, duration: jingle.duration, color: '#3b82f6' }); };
@@ -500,7 +510,8 @@ const RadioRundownPro = () => {
           <div className="flex gap-2 flex-wrap mb-3">
             <button onClick={() => setShowRundownSelector(!showRundownSelector)} className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2'}><FolderOpen size={16} />Draaiboeken</button>
             <button onClick={createNewRunbook} className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2'}><Plus size={16} />Nieuw</button>
-            <button onClick={() => setShowClockWindow(!showClockWindow)} className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2 text-sm'}>🕐 {showClockWindow ? 'Verberg Klok' : 'Toon Klok'}</button>
+            <button onClick={() => setShowClock(!showClock)} className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2 text-sm'}>{showClock ? 'Verberg Klok' : 'Toon Klok'}</button>
+            <button onClick={() => setShowClockWindow(true)} className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2 text-sm'}>🕐 Klok in venster</button>
             <button onClick={() => setShowPrintModal(true)} className={t.buttonSecondary + ' px-3 py-2 rounded-lg text-sm'}>🖨️ Print</button>
             <button onClick={() => setExpandedItems(new Set(items.map(i => i.id)))} className={t.buttonSecondary + ' px-3 py-2 rounded-lg text-sm'}>⬇️ Alles uit</button>
             <button onClick={() => setExpandedItems(new Set())} className={t.buttonSecondary + ' px-3 py-2 rounded-lg text-sm'}>⬆️ Alles in</button>
@@ -513,6 +524,9 @@ const RadioRundownPro = () => {
               <button onClick={() => quickAdd('reportage')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>⭐ Reportage</button>
               <button onClick={() => quickAdd('live')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>📡 Live</button>
               <button onClick={() => quickAdd('game')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>🎮 Spel</button>
+              {customTemplates.map(tpl => (
+                <button key={tpl.key} onClick={() => quickAdd(tpl.item)} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm flex items-center gap-1'}>{tpl.label} <Plus size={14} /></button>
+              ))}
               <button onClick={() => setShowJingleEditor(true)} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>🔔 Jingles ▼</button>
             </div>
           </div>
@@ -615,10 +629,20 @@ const RadioRundownPro = () => {
             </div>
           </div>
 
-          {!showClockWindow && (
+          {showClock && !showClockWindow && (
             <div className={t.card + ' rounded-lg p-6 shadow border ' + t.border}>
               <h2 className={'text-xl font-semibold mb-4 ' + t.text}>Klok</h2>
-              <Clock />
+              <Clock
+                items={items}
+                currentTime={currentTime}
+                isPlaying={isPlaying}
+                setIsPlaying={setIsPlaying}
+                theme={theme}
+                t={t}
+                formatTime={formatTime}
+                formatTimeShort={formatTimeShort}
+                totalDuration={totalDuration}
+              />
             </div>
           )}
         </div>
@@ -683,7 +707,20 @@ const RadioRundownPro = () => {
         )}
       </div>
 
-      {showAddForm && <ItemForm onSave={addItem} onCancel={() => setShowAddForm(false)} />}
+      {showAddForm && <ItemForm
+        onSave={addItem}
+        onCancel={() => setShowAddForm(false)}
+        t={t}
+        formatTimeShort={formatTimeShort}
+        parseTimeInput={parseTimeInput}
+        isSearchingSpotify={isSearchingSpotify}
+        handleSearch={handleSpotifySearch}
+        localResults={localResults}
+        showLocal={showLocal}
+        selectResult={selectSpotifyResult}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+      />}
       {editingItem && <ItemForm item={editingItem} onSave={(updated) => updateItem(editingItem.id, updated)} onCancel={() => setEditingItem(null)} />}
     </div>
   );

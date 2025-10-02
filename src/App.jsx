@@ -329,6 +329,14 @@ const RadioRundownPro = () => {
 
   const currentRunbook = rundowns.find(r => r.id === currentRundownId);
 
+  const openClockWindow = () => {
+    const win = window.open('', 'Klok', 'width=400,height=400');
+    if (win) {
+      win.document.write('<!DOCTYPE html><html><head><title>Klok</title><meta name="viewport" content="width=400,initial-scale=1" /></head><body style="margin:0;background:#111;color:#fff;font-family:sans-serif;"><div id="clock-root"></div></body></html>');
+      // Hier kun je eventueel een eenvoudige klok tonen
+    }
+  };
+
   return (
     <div className={t.bg + ' min-h-screen p-6'}>
       <div className="max-w-7xl mx-auto">

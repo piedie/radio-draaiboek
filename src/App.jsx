@@ -571,7 +571,21 @@ const RadioRundownPro = () => {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
       />}
-      {editingItem && <ItemForm item={editingItem} onSave={(updated) => updateItem(editingItem.id, updated)} onCancel={() => setEditingItem(null)} />}
+      {editingItem && <ItemForm
+        item={editingItem}
+        onSave={(updated) => updateItem(editingItem.id, updated)}
+        onCancel={() => setEditingItem(null)}
+        t={t}
+        formatTimeShort={formatTimeShort}
+        parseTimeInput={parseTimeInput}
+        isSearchingSpotify={isSearchingSpotify}
+        handleSearch={handleSpotifySearch}
+        localResults={localResults}
+        showLocal={showLocal}
+        selectResult={selectSpotifyResult}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+      />}
     </div>
   );
 };

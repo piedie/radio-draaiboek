@@ -327,6 +327,8 @@ const RadioRundownPro = () => {
     setLocalResults([]);
   };
 
+  const currentRunbook = rundowns.find(r => r.id === currentRundownId);
+
   return (
     <div className={t.bg + ' min-h-screen p-6'}>
       <div className="max-w-7xl mx-auto">

@@ -42,13 +42,13 @@ const ItemForm = ({ item, onSave, onCancel, t, formatTimeShort, parseTimeInput, 
               <div>
                 <label className={'block text-sm mb-1 ' + t.text}>Spotify Zoeken</label>
                 <div className="flex gap-2">
-                  <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Bijv: hotel california" className={'flex-1 px-3 py-2 rounded border ' + t.input} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} />
-                  <button type="button" onClick={handleSearch} disabled={isSearchingSpotify} className={'px-4 py-2 rounded flex items-center gap-2 disabled:opacity-50 ' + t.button}>{isSearchingSpotify ? <>Zoeken...</> : <>Zoek</>}</button>
+                  <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Bijv: hotel california" className={'flex-1 px-3 py-2 rounded border ' + t.input} onKeyDown={(e) => e.key === 'Enter' && handleSearch(form)} />
+                  <button type="button" onClick={() => handleSearch(form)} disabled={isSearchingSpotify} className={'px-4 py-2 rounded flex items-center gap-2 disabled:opacity-50 ' + t.button}>{isSearchingSpotify ? <>Zoeken...</> : <>Zoek</>}</button>
                 </div>
                 {showLocal && localResults.length > 0 && (
                   <div className={'mt-2 border rounded ' + t.border}>
                     {localResults.map((result, idx) => (
-                      <button key={idx} onClick={() => selectResult(result)} className={'w-full text-left px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900 flex items-center justify-between border-b last:border-b-0 ' + t.border}>
+                      <button key={idx} onClick={() => selectResult(result, setForm)} className={'w-full text-left px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900 flex items-center justify-between border-b last:border-b-0 ' + t.border}>
                         <div className="flex-1">
                           <div className={'font-medium ' + t.text}>{result.name}</div>
                           <div className={'text-sm ' + t.textSecondary}>{result.artist} • {formatTimeShort(result.duration)}</div>

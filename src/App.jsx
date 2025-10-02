@@ -5,6 +5,7 @@ import { supabase } from './supabaseClient';
 import { searchSpotifyTrack } from './spotifyClient';
 import Clock from './Clock';
 import ItemForm from './ItemForm';
+import ItemTypesSettings from './ItemTypesSettings';
 
 const RadioRundownPro = () => {
   const [theme, setTheme] = useState('light');
@@ -36,11 +37,7 @@ const RadioRundownPro = () => {
   const [jingles, setJingles] = useState([]);
   const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
   const [showClock, setShowClock] = useState(true);
-
-  const customTemplates = [
-    { key: 'interview', label: '🎤 Interview', item: { type: 'talk', title: 'Interview', duration: 300, color: '#22c55e' } },
-    { key: 'jingle1', label: '🔔 Jingle 1', item: { type: 'jingle', title: 'Jingle 1', duration: 10, color: '#3b82f6' } },
-  ];
+  const [itemTypes, setItemTypes] = useState([]);
 
   const t = theme === 'light' ? {
     bg: 'bg-gray-50', card: 'bg-white', text: 'text-gray-900', textSecondary: 'text-gray-600',
@@ -329,9 +326,11 @@ const RadioRundownPro = () => {
       type: 'music', title: '', artist: '', duration: 180, first_words: '', notes: '', last_words: '',
       color: '#ef4444', connection_type: '', phone_number: ''
     });
+    // State voor Spotify zoeken
     const [localResults, setLocalResults] = useState([]);
     const [showLocal, setShowLocal] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
 
     const colorOptions = [
       { name: 'Rood', value: '#ef4444' }, { name: 'Groen', value: '#22c55e' },
@@ -341,7 +340,8 @@ const RadioRundownPro = () => {
     ];
     const connectionTypes = ['LUCI', 'Teams', 'WZ', 'Telefoon'];
 
-    const handleSearch = async () => {
+    // Handler voor zoeken
+    const handleSpotifySearch = async (form) => {
       const query = searchQuery || form.title + (form.artist ? ' ' + form.artist : '');
       if (!query) return;
       setIsSearchingSpotify(true);
@@ -349,6 +349,13 @@ const RadioRundownPro = () => {
       setLocalResults(results);
       setShowLocal(results.length > 0);
       setIsSearchingSpotify(false);
+    };
+
+    // Handler voor selecteren
+    const selectSpotifyResult = (result, setForm) => {
+      setForm(form => ({ ...form, title: result.name, artist: result.artist, duration: result.duration }));
+      setShowLocal(false);
+      setLocalResults([]);
     };
 
     const selectResult = (result) => {
@@ -385,8 +392,8 @@ const RadioRundownPro = () => {
                 <div>
                   <label className={'block text-sm mb-1 ' + t.text}>Spotify Zoeken</label>
                   <div className="flex gap-2">
-                    <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Bijv: hotel california" className={'flex-1 px-3 py-2 rounded border ' + t.input} onKeyPress={(e) => e.key === 'Enter' && handleSearch()} />
-                    <button type="button" onClick={handleSearch} disabled={isSearchingSpotify} className={'px-4 py-2 rounded flex items-center gap-2 disabled:opacity-50 ' + t.button}>{isSearchingSpotify ? <>Zoeken...</> : <><Search size={16} /> Zoek</>}</button>
+                    <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Bijv: hotel california" className={'flex-1 px-3 py-2 rounded border ' + t.input} onKeyPress={(e) => e.key === 'Enter' && handleSpotifySearch(form)} />
+                    <button type="button" onClick={() => handleSpotifySearch(form)} disabled={isSearchingSpotify} className={'px-4 py-2 rounded flex items-center gap-2 disabled:opacity-50 ' + t.button}>{isSearchingSpotify ? <>Zoeken...</> : <><Search size={16} /> Zoek</>}</button>
                   </div>
                   {showLocal && localResults.length > 0 && (
                     <div className={'mt-2 border rounded ' + t.border}>
@@ -511,10 +518,11 @@ const RadioRundownPro = () => {
             <button onClick={() => setShowRundownSelector(!showRundownSelector)} className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2'}><FolderOpen size={16} />Draaiboeken</button>
             <button onClick={createNewRunbook} className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2'}><Plus size={16} />Nieuw</button>
             <button onClick={() => setShowClock(!showClock)} className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2 text-sm'}>{showClock ? 'Verberg Klok' : 'Toon Klok'}</button>
-            <button onClick={() => setShowClockWindow(true)} className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2 text-sm'}>🕐 Klok in venster</button>
+            <button onClick={openClockWindow} className={t.button + ' px-4 py-2 rounded-lg flex items-center gap-2 text-sm'}>🕐 Klok in venster</button>
             <button onClick={() => setShowPrintModal(true)} className={t.buttonSecondary + ' px-3 py-2 rounded-lg text-sm'}>🖨️ Print</button>
             <button onClick={() => setExpandedItems(new Set(items.map(i => i.id)))} className={t.buttonSecondary + ' px-3 py-2 rounded-lg text-sm'}>⬇️ Alles uit</button>
             <button onClick={() => setExpandedItems(new Set())} className={t.buttonSecondary + ' px-3 py-2 rounded-lg text-sm'}>⬆️ Alles in</button>
+            <button onClick={() => setShowSettings(!showSettings)} className={t.buttonSecondary + ' px-4 py-2 rounded-lg flex items-center gap-2'}>⚙️ Instellingen</button>
           </div>
           <div className={'border-t pt-3 mb-2 ' + t.border}>
             <div className={'text-xs font-semibold mb-2 ' + t.textSecondary}>ITEMS TOEVOEGEN:</div>
@@ -524,10 +532,9 @@ const RadioRundownPro = () => {
               <button onClick={() => quickAdd('reportage')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>⭐ Reportage</button>
               <button onClick={() => quickAdd('live')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>📡 Live</button>
               <button onClick={() => quickAdd('game')} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>🎮 Spel</button>
-              {customTemplates.map(tpl => (
-                <button key={tpl.key} onClick={() => quickAdd(tpl.item)} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm flex items-center gap-1'}>{tpl.label} <Plus size={14} /></button>
+              {itemTypes.map((type, idx) => (
+                <button key={idx} onClick={() => quickAdd(type)} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>{type.name}</button>
               ))}
-              <button onClick={() => setShowJingleEditor(true)} className={t.buttonSecondary + ' px-3 py-2 rounded text-sm'}>🔔 Jingles ▼</button>
             </div>
           </div>
         </div>
@@ -553,7 +560,7 @@ const RadioRundownPro = () => {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className={t.card + ' rounded-lg p-6 shadow border ' + t.border}>
+          <div className={(!showClock && !showClockWindow ? 'col-span-2 ' : '') + t.card + ' rounded-lg p-6 shadow border ' + t.border}>
             <h2 className={'text-xl font-semibold mb-4 ' + t.text}>Rundown</h2>
             <div className="space-y-2">
               {items.length === 0 ? (
@@ -705,6 +712,9 @@ const RadioRundownPro = () => {
             </div>
           </div>
         )}
+
+        {showSettings && <ItemTypesSettings itemTypes={itemTypes} setItemTypes={setItemTypes} t={t} />}
+
       </div>
 
       {showAddForm && <ItemForm

@@ -743,7 +743,6 @@ const RadioRundownPro = () => {
         {editingItem && <ItemForm item={editingItem} onSave={(updated) => updateItem(editingItem.id, updated)} onCancel={() => setEditingItem(null)} />}
       </div>
     );
-  };
-};
+}
 
 export default RadioRundownPro;

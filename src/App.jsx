@@ -337,6 +337,16 @@ const RadioRundownPro = () => {
     }
   };
 
+  const handleSpotifySearch = async (form) => {
+    const query = searchQuery || form.title + (form.artist ? ' ' + form.artist : '');
+    if (!query) return;
+    setIsSearchingSpotify(true);
+    const results = await searchSpotifyTrack(query);
+    setLocalResults(results);
+    setShowLocal(results.length > 0);
+    setIsSearchingSpotify(false);
+  };
+
   return (
     <div className={t.bg + ' min-h-screen p-6'}>
       <div className="max-w-7xl mx-auto">

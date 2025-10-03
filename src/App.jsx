@@ -257,6 +257,76 @@ const RadioRundownPro = () => {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [isPlaying, totalDuration]);
 
+  // Keyboard shortcuts for game audio files
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      // Only handle shortcuts when no input field is focused and no modals are open
+      if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || showAddForm || editingItem || showPrintModal || showLogin) {
+        return;
+      }
+
+      // Check for number keys 1-4 to play game audio files
+      const keyNumber = parseInt(event.key);
+      if (keyNumber >= 1 && keyNumber <= 4) {
+        event.preventDefault();
+        playGameAudioByShortcut(keyNumber);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [items, expandedItems]);
+
+  // Function to play game audio by shortcut
+  const playGameAudioByShortcut = (keyNumber) => {
+    // Find the first expanded game item or the first game item if none expanded
+    let targetGameItem = null;
+    
+    // First try to find an expanded game item
+    for (const item of items) {
+      if (item.type === 'game' && expandedItems.has(item.id) && item.audio_files && item.audio_files.length > 0) {
+        targetGameItem = item;
+        break;
+      }
+    }
+    
+    // If no expanded game item, find first game item with audio files
+    if (!targetGameItem) {
+      for (const item of items) {
+        if (item.type === 'game' && item.audio_files && item.audio_files.length > 0) {
+          targetGameItem = item;
+          break;
+        }
+      }
+    }
+    
+    if (targetGameItem && targetGameItem.audio_files && targetGameItem.audio_files[keyNumber - 1]) {
+      const audioFile = targetGameItem.audio_files[keyNumber - 1];
+      
+      // Create a temporary audio element to play the file
+      const audio = new Audio(audioFile.data);
+      audio.volume = 0.7;
+      
+      // Stop any currently playing audio first
+      document.querySelectorAll('audio').forEach(audioEl => {
+        if (!audioEl.paused) {
+          audioEl.pause();
+          audioEl.currentTime = 0;
+        }
+      });
+      
+      audio.play().catch(error => {
+        console.error('Error playing game audio via shortcut:', error);
+      });
+      
+      console.log(`Playing ${audioFile.name} via shortcut ${keyNumber}`);
+    } else {
+      console.log(`No game audio file found for shortcut ${keyNumber}`);
+    }
+  };
+
   // Print functionality
   const printRundown = () => {
     let content = 'RADIO DRAAIBOEK\n================\n\n';
@@ -544,7 +614,14 @@ const RadioRundownPro = () => {
         <div className={`grid gap-6 ${showClock ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
           {/* Rundown list - krijgt volledige breedte als klok verborgen is */}
           <div className={`${t.card} rounded-lg p-6 shadow border ${t.border} ${!showClock ? 'lg:col-span-1' : ''}`}>
-            <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>Rundown</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className={`text-xl font-semibold ${t.text}`}>Rundown</h2>
+              {items.some(item => item.type === 'game' && item.audio_files && item.audio_files.length > 0) && (
+                <div className="text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-3 py-1 rounded-full">
+                  💡 Tip: Gebruik toetsen 1-4 om geluidseffectjes af te spelen
+                </div>
+              )}
+            </div>
             <RundownList 
               items={items}
               expandedItems={expandedItems}

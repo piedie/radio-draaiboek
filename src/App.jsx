@@ -1,10 +1,13 @@
 // src/App.jsx - Radio Rundown Pro v1.2 - Verbeterd en gerefactored
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Copy, LogOut, Moon, Sun, FolderOpen, Trash2 } from 'lucide-react';
+import { Plus, Copy, LogOut, Moon, Sun, FolderOpen, Trash2, Settings } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import Clock from './components/Clock';
 import ItemForm from './components/ItemForm';
+import ItemFormNew from './components/ItemFormNew';
+import ItemTypeManager from './components/ItemTypeManager';
 import RundownList from './components/RundownList';
+import { loadUserItemTypes, getItemTypeByName } from './utils/itemTypeManager';
 
 const RadioRundownPro = () => {
   const [theme, setTheme] = useState('light');
@@ -32,6 +35,11 @@ const RadioRundownPro = () => {
   // State voor klok weergave
   const [showClock, setShowClock] = useState(true);
   const [showClockWindow, setShowClockWindow] = useState(false);
+  
+  // State voor item types
+  const [userItemTypes, setUserItemTypes] = useState([]);
+  const [showItemTypeManager, setShowItemTypeManager] = useState(false);
+  const [useNewItemForm, setUseNewItemForm] = useState(false); // Toggle voor nieuwe vs oude form
   
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -74,16 +82,23 @@ const RadioRundownPro = () => {
   }, []);
 
   const loadUserData = async (userId) => {
-    const { data: runbooksData } = await supabase.from('runbooks').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-    if (runbooksData) {
-      setRundowns(runbooksData);
-      if (runbooksData.length > 0) {
-        setCurrentRundownId(runbooksData[0].id);
-        loadRunbookItems(runbooksData[0].id);
+    try {
+      // Laad runbooks
+      const { data: runbooksData } = await supabase.from('runbooks').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+      
+      // Laad item types
+      const itemTypes = await loadUserItemTypes(userId);
+      setUserItemTypes(itemTypes);
+      
+      if (runbooksData?.length > 0) {
+        setRundowns(runbooksData);
+        const firstRundown = runbooksData[0];
+        setCurrentRundownId(firstRundown.id);
+        loadRunbookItems(firstRundown.id);
       }
+    } catch (error) {
+      console.error('Error loading user data:', error);
     }
-    const { data: jinglesData } = await supabase.from('jingles').select('*').eq('user_id', userId);
-    if (jinglesData) setJingles(jinglesData);
   };
 
   const loadRunbookItems = async (runbookId) => {
@@ -239,22 +254,47 @@ const RadioRundownPro = () => {
     setDragOverIndex(null);
   };
 
-  // Quick add templates
-  const quickAdd = (type) => {
-    const templates = {
-      music: { type: 'music', title: 'Nieuw nummer', artist: '', duration: 180, color: '#ef4444' },
-      talk: { type: 'talk', title: 'Presentatie', duration: 120, color: '#22c55e' },
-      reportage: { type: 'reportage', title: 'Reportage', duration: 180, color: '#f59e0b' },
-      live: { type: 'live', title: 'Live', duration: 300, color: '#8b5cf6' },
-      game: { type: 'game', title: 'Spel', duration: 240, color: '#f59e0b' }
-    };
-    if (templates[type]) addItem(templates[type]);
+  // Quick add templates - now using user item types
+  const quickAdd = (typeName) => {
+    const itemType = getItemTypeByName(userItemTypes, typeName);
+    if (itemType) {
+      const newItem = {
+        type: itemType.name,
+        title: `Nieuw ${itemType.display_name.toLowerCase()}`,
+        artist: itemType.name === 'music' ? '' : undefined,
+        duration: itemType.default_duration,
+        color: itemType.color,
+        user_item_type_id: itemType.id
+      };
+      addItem(newItem);
+    }
   };
 
+  // Callback voor wanneer item types worden aangepast
+  const handleItemTypesChanged = async () => {
+    if (currentUser) {
+      const itemTypes = await loadUserItemTypes(currentUser.id);
+      setUserItemTypes(itemTypes);
+    }
+  };
+  
   const addJingle = async (jingle) => { 
     addItem({ type: 'jingle', title: jingle.title, duration: jingle.duration, color: '#3b82f6' }); 
   };
 
+  // Helper functie voor item type iconen
+  const getItemTypeIcon = (typeName) => {
+    const icons = {
+      music: '🎵',
+      talk: '🎙️',
+      jingle: '🔔',
+      reportage: '⭐',
+      live: '📡',
+      game: '🎮'
+    };
+    return icons[typeName] || '📄';
+  };
+  
   // UI helpers
   const toggleExpanded = (id) => {
     const newSet = new Set(expandedItems);
@@ -522,44 +562,37 @@ const RadioRundownPro = () => {
           
           {/* Quick add buttons */}
           <div className={`border-t pt-3 mb-2 ${t.border}`}>
-            <div className={`text-xs font-semibold mb-2 ${t.textSecondary}`}>ITEMS TOEVOEGEN:</div>
+            <div className="flex items-center justify-between mb-2">
+              <div className={`text-xs font-semibold ${t.textSecondary}`}>ITEMS TOEVOEGEN:</div>
+              <button 
+                onClick={() => setShowItemTypeManager(true)}
+                className={`${t.buttonSecondary} px-2 py-1 rounded text-xs`}
+                title="Item types beheren"
+              >
+                <Settings size={12} />
+              </button>
+            </div>
             <div className="flex gap-2 flex-wrap">
-              <button 
-                onClick={() => quickAdd('music')} 
-                className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
-              >
-                🎵 Muziek
-              </button>
-              <button 
-                onClick={() => quickAdd('talk')} 
-                className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
-              >
-                🎙️ Presentatie
-              </button>
-              <button 
-                onClick={() => quickAdd('reportage')} 
-                className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
-              >
-                ⭐ Reportage
-              </button>
-              <button 
-                onClick={() => quickAdd('live')} 
-                className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
-              >
-                📡 Live
-              </button>
-              <button 
-                onClick={() => quickAdd('game')} 
-                className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
-              >
-                🎮 Spel
-              </button>
-              <button 
-                onClick={() => setShowJingleEditor(true)} 
-                className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
-              >
-                🔔 Jingles ▼
-              </button>
+              {userItemTypes.slice(0, 6).map(itemType => (
+                <button 
+                  key={itemType.name}
+                  onClick={() => quickAdd(itemType.name)} 
+                  className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
+                  style={{ 
+                    borderLeft: `3px solid ${itemType.color}`,
+                  }}
+                >
+                  {getItemTypeIcon(itemType.name)} {itemType.display_name}
+                </button>
+              ))}
+              {userItemTypes.length > 6 && (
+                <button 
+                  onClick={() => setShowAddForm(true)}
+                  className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
+                >
+                  + Meer...
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -608,6 +641,13 @@ const RadioRundownPro = () => {
             <div className="flex items-center justify-between mb-4">
               <h2 className={`text-xl font-semibold ${t.text}`}>Rundown</h2>
               <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setUseNewItemForm(!useNewItemForm)}
+                  className={`${useNewItemForm ? t.button : t.buttonSecondary} px-3 py-1 rounded text-xs`}
+                  title={`Schakel naar ${useNewItemForm ? 'oude' : 'nieuwe'} form`}
+                >
+                  {useNewItemForm ? '🆕' : '📝'} Form
+                </button>
                 <button 
                   onClick={() => window.debugDB && window.debugDB()}
                   className={`${t.buttonSecondary} px-3 py-1 rounded text-xs`}
@@ -760,7 +800,7 @@ const RadioRundownPro = () => {
       </div>
 
       {/* Forms */}
-      {showAddForm && (
+      {showAddForm && !useNewItemForm && (
         <ItemForm 
           onSave={addItem} 
           onCancel={() => setShowAddForm(false)}
@@ -771,8 +811,21 @@ const RadioRundownPro = () => {
           setIsSearchingSpotify={setIsSearchingSpotify}
         />
       )}
+
+      {showAddForm && useNewItemForm && (
+        <ItemFormNew
+          onSave={addItem} 
+          onCancel={() => setShowAddForm(false)}
+          theme={theme}
+          formatTimeShort={formatTimeShort}
+          parseTimeInput={parseTimeInput}
+          isSearchingSpotify={isSearchingSpotify}
+          setIsSearchingSpotify={setIsSearchingSpotify}
+          availableItemTypes={userItemTypes}
+        />
+      )}
       
-      {editingItem && (
+      {editingItem && !useNewItemForm && (
         <ItemForm 
           item={editingItem} 
           onSave={(updated) => updateItem(editingItem.id, updated)} 
@@ -782,6 +835,30 @@ const RadioRundownPro = () => {
           parseTimeInput={parseTimeInput}
           isSearchingSpotify={isSearchingSpotify}
           setIsSearchingSpotify={setIsSearchingSpotify}
+        />
+      )}
+
+      {editingItem && useNewItemForm && (
+        <ItemFormNew
+          item={editingItem} 
+          onSave={(updated) => updateItem(editingItem.id, updated)} 
+          onCancel={() => setEditingItem(null)}
+          theme={theme}
+          formatTimeShort={formatTimeShort}
+          parseTimeInput={parseTimeInput}
+          isSearchingSpotify={isSearchingSpotify}
+          setIsSearchingSpotify={setIsSearchingSpotify}
+          availableItemTypes={userItemTypes}
+        />
+      )}
+
+      {/* Item Type Manager */}
+      {showItemTypeManager && (
+        <ItemTypeManager
+          currentUser={currentUser}
+          theme={theme}
+          onClose={() => setShowItemTypeManager(false)}
+          onItemTypesChanged={handleItemTypesChanged}
         />
       )}
     </div>

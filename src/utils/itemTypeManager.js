@@ -115,10 +115,11 @@ export const loadUserItemTypes = async (userId) => {
     
     console.log('🔄 Found custom types:', formattedCustomTypes);
     
-    // Combineer standaard types met custom types
+    // Combineer custom types EERST, dan standaard types
+    // Zo worden custom types als eerste getoond in de quick-add knoppen
     const allTypes = [
-      ...DEFAULT_ITEM_TYPES.map(type => ({ ...type, is_custom: false })),
-      ...formattedCustomTypes
+      ...formattedCustomTypes,
+      ...DEFAULT_ITEM_TYPES.map(type => ({ ...type, is_custom: false }))
     ];
     
     console.log('✅ Loaded item types:', allTypes);

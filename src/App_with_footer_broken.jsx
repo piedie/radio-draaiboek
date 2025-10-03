@@ -1,15 +1,16 @@
-// src/App.jsx - Radio Rundown Pro v2.2 - Met Custom Item Types
+// src/App.jsx - Radio Rundown Pro v2.1 - Verbeterd en gerefactored
 import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Copy, LogOut, Moon, Sun, FolderOpen, Trash2, Settings } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import Clock from './components/Clock';
 import ItemForm from './components/ItemForm';
+import ItemFormNew from './components/ItemFormNew';
 import ItemTypeManager from './components/ItemTypeManager';
 import RundownList from './components/RundownList';
 import { loadUserItemTypes, getItemTypeByName } from './utils/itemTypeManager';
 
 // Versie informatie
-const APP_VERSION = '2.2';
+const APP_VERSION = '2.1';
 const BUILD_DATE = '2025-10-04';
 const COPYRIGHT_YEAR = new Date().getFullYear();
 
@@ -43,6 +44,7 @@ const RadioRundownPro = () => {
   // State voor item types
   const [userItemTypes, setUserItemTypes] = useState([]);
   const [showItemTypeManager, setShowItemTypeManager] = useState(false);
+  const [useNewItemForm, setUseNewItemForm] = useState(false); // Toggle voor nieuwe vs oude form
   
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -88,34 +90,58 @@ const RadioRundownPro = () => {
     try {
       // Laad runbooks
       const { data: runbooksData } = await supabase.from('runbooks').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-      if (runbooksData) {
-        setRundowns(runbooksData);
-        if (runbooksData.length > 0) {
-          setCurrentRundownId(runbooksData[0].id);
-          loadRunbookItems(runbooksData[0].id);
-        }
-      }
-      
-      // Laad jingles
-      const { data: jinglesData } = await supabase.from('jingles').select('*').eq('user_id', userId);
-      if (jinglesData) setJingles(jinglesData);
       
       // Laad item types
       const itemTypes = await loadUserItemTypes(userId);
       setUserItemTypes(itemTypes);
-      console.log('🔄 Loaded item types in loadUserData:', itemTypes);
+      
+      if (runbooksData?.length > 0) {
+        setRundowns(runbooksData);
+        const firstRundown = runbooksData[0];
+        setCurrentRundownId(firstRundown.id);
+        loadRunbookItems(firstRundown.id);
+      }
     } catch (error) {
       console.error('Error loading user data:', error);
     }
   };
 
   const loadRunbookItems = async (runbookId) => {
-    const { data } = await supabase.from('items').select('*').eq('runbook_id', runbookId).order('position');
-    if (data) setItems(data);
+    console.log('🔄 Loading items for runbook:', runbookId);
+    const { data, error } = await supabase.from('items').select('*').eq('runbook_id', runbookId).order('position');
+    
+    if (error) {
+      console.error('❌ Error loading items:', error);
+      return;
+    }
+    
+    console.log('✅ Loaded items:', data?.length || 0, 'items');
+    
+    // Normaliseer de data om null waarden te vervangen door lege strings/arrays
+    const normalizedData = data?.map(item => ({
+      ...item,
+      title: item.title || '',
+      artist: item.artist || '',
+      notes: item.notes || '',
+      first_words: item.first_words || '',
+      last_words: item.last_words || '',
+      connection_type: item.connection_type || '',
+      phone_number: item.phone_number || '',
+      audio_files: item.audio_files || []
+    })) || [];
+    
+    if (normalizedData && normalizedData.length > 0) {
+      console.log('📋 First item example (normalized):', normalizedData[0]);
+    }
+    
+    setItems(normalizedData);
   };
 
   useEffect(() => {
-    if (currentRundownId) loadRunbookItems(currentRundownId);
+    if (currentRundownId) {
+      console.log('🔄 CurrentRundownId changed to:', currentRundownId);
+      loadRunbookItems(currentRundownId);
+    }
   }, [currentRundownId]);
 
   // Authentication handlers
@@ -176,13 +202,34 @@ const RadioRundownPro = () => {
   const addItem = async (item) => {
     if (!currentRundownId) return;
     const position = items.length;
-    const { data } = await supabase.from('items').insert([{ runbook_id: currentRundownId, ...item, position }]).select();
+    console.log('➕ Adding item:', item);
+    console.log('📌 To runbook:', currentRundownId);
+    
+    const { data, error } = await supabase.from('items').insert([{ runbook_id: currentRundownId, ...item, position }]).select();
+    
+    if (error) {
+      console.error('❌ Error adding item:', error);
+      alert('Fout bij opslaan: ' + error.message);
+      return;
+    }
+    
+    console.log('✅ Item added to database:', data[0]);
     if (data) setItems([...items, data[0]]);
     setShowAddForm(false);
   };
 
   const updateItem = async (id, updated) => {
-    await supabase.from('items').update(updated).eq('id', id);
+    console.log('🔄 Updating item:', id, 'with:', updated);
+    
+    const { data, error } = await supabase.from('items').update(updated).eq('id', id).select();
+    
+    if (error) {
+      console.error('❌ Error updating item:', error);
+      alert('Fout bij bijwerken: ' + error.message);
+      return;
+    }
+    
+    console.log('✅ Item updated in database:', data[0]);
     setItems(items.map(item => item.id === id ? { ...item, ...updated } : item));
     setEditingItem(null);
   };
@@ -214,12 +261,7 @@ const RadioRundownPro = () => {
 
   // Quick add templates - now using user item types
   const quickAdd = (typeName) => {
-    console.log('🔄 quickAdd called with:', typeName);
-    console.log('🔄 Available userItemTypes:', userItemTypes);
-    
     const itemType = getItemTypeByName(userItemTypes, typeName);
-    console.log('🔄 Found itemType:', itemType);
-    
     if (itemType) {
       const newItem = {
         type: itemType.name,
@@ -227,12 +269,9 @@ const RadioRundownPro = () => {
         artist: itemType.name === 'music' ? '' : undefined,
         duration: itemType.default_duration,
         color: itemType.color,
-        user_item_type_id: itemType.id || null
+        user_item_type_id: itemType.id
       };
-      console.log('🔄 Creating new item:', newItem);
       addItem(newItem);
-    } else {
-      console.error('❌ Item type not found:', typeName);
     }
   };
 
@@ -246,6 +285,10 @@ const RadioRundownPro = () => {
       setUserItemTypes(itemTypes);
     }
   };
+  
+  const addJingle = async (jingle) => { 
+    addItem({ type: 'jingle', title: jingle.title, duration: jingle.duration, color: '#3b82f6' }); 
+  };
 
   // Helper functie voor item type iconen
   const getItemTypeIcon = (typeName) => {
@@ -255,17 +298,11 @@ const RadioRundownPro = () => {
       jingle: '🔔',
       reportage: '⭐',
       live: '📡',
-      game: '🎮',
-      sponsor: '💰',
-      weerbericht: '🌤️'
+      game: '🎮'
     };
     return icons[typeName] || '📄';
   };
-
-  const addJingle = async (jingle) => { 
-    addItem({ type: 'jingle', title: jingle.title, duration: jingle.duration, color: '#3b82f6' }); 
-  };
-
+  
   // UI helpers
   const toggleExpanded = (id) => {
     const newSet = new Set(expandedItems);
@@ -345,6 +382,59 @@ const RadioRundownPro = () => {
     setShowClockWindow(true);
   };
 
+  // Debug functie om database inhoud te checken
+  const debugDatabaseContent = async () => {
+    if (!currentRundownId) return;
+    console.log('🔍 Debug: Checking database content for runbook:', currentRundownId);
+    
+    const { data, error } = await supabase.from('items').select('*').eq('runbook_id', currentRundownId);
+    
+    if (error) {
+      console.error('❌ Error fetching debug data:', error);
+      return;
+    }
+    
+    console.log('📊 Database contains', data?.length || 0, 'items');
+    data?.forEach((item, index) => {
+      const emptyFields = [];
+      if (!item.title) emptyFields.push('title');
+      if (!item.artist && item.type === 'music') emptyFields.push('artist');
+      if (!item.notes && ['talk', 'reportage'].includes(item.type)) emptyFields.push('notes');
+      if (!item.first_words && ['talk', 'reportage', 'live'].includes(item.type)) emptyFields.push('first_words');
+      if (!item.last_words && ['talk', 'reportage', 'live'].includes(item.type)) emptyFields.push('last_words');
+      if (!item.audio_files && item.type === 'game') emptyFields.push('audio_files');
+      
+      console.log(`📋 Item ${index + 1}:`, {
+        id: item.id,
+        title: item.title || '❌ LEEG',
+        type: item.type,
+        emptyFields: emptyFields.length > 0 ? emptyFields : 'Geen',
+        position: item.position
+      });
+    });
+  };
+
+  // Maak debug functie beschikbaar in console
+  useEffect(() => {
+    window.debugDB = debugDatabaseContent;
+  }, [currentRundownId]);
+
+  // Effect om te checken of database migratie is uitgevoerd
+  useEffect(() => {
+    if (userItemTypes.length > 0) {
+      const hasCustomTypes = userItemTypes.some(type => type.is_custom);
+      if (!hasCustomTypes && userItemTypes.length === 6) { // 6 = aantal standaard types
+        console.log('⚠️ Alleen standaard item types gevonden');
+        console.log('💡 Tip: Voer database_migration.sql uit in Supabase om custom types te gebruiken');
+      }
+    }
+  }, [userItemTypes]);
+  
+  // Debug effect voor userItemTypes
+  useEffect(() => {
+    console.log('🔄 userItemTypes state updated:', userItemTypes);
+  }, [userItemTypes]);
+  
   // Login screen
   if (showLogin) {
     return (
@@ -393,17 +483,17 @@ const RadioRundownPro = () => {
               onClick={() => setIsRegistering(!isRegistering)} 
               className={`w-full ${t.buttonSecondary} px-4 py-3 rounded-lg font-medium`}
             >
-              {isRegistering ? 'Al een account? Inloggen' : 'Nog geen account? Registreren'}
+              {isRegistering ? 'Al een account? Inloggen' : 'Nog geen account? Registreer'}
             </button>
           </div>
           
           {/* Login Footer */}
           <div className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-700 text-center">
             <div className={`text-xs ${t.textSecondary}`}>
-              © {COPYRIGHT_YEAR} Landstede MBO. Alle rechten voorbehouden.
+              © {COPYRIGHT_YEAR} Landstede MBO
             </div>
             <div className={`text-xs ${t.textSecondary} mt-1`}>
-              Radio Rundown Pro v{APP_VERSION} • Build: {BUILD_DATE}
+              Radio Rundown Pro v{APP_VERSION}
             </div>
           </div>
         </div>
@@ -411,8 +501,7 @@ const RadioRundownPro = () => {
     );
   }
 
-  const currentRunbook = rundowns.find(r => r.id === currentRundownId);
-
+  // Main app
   return (
     <div className={`${t.bg} min-h-screen p-6`}>
       <div className="max-w-7xl mx-auto">
@@ -517,7 +606,7 @@ const RadioRundownPro = () => {
               </button>
             </div>
             <div className="flex gap-2 flex-wrap">
-              {userItemTypes.slice(0, 8).map(itemType => {
+              {userItemTypes.slice(0, 6).map(itemType => {
                 console.log('🔄 Rendering quick-add button for:', itemType);
                 return (
                   <button 
@@ -532,7 +621,7 @@ const RadioRundownPro = () => {
                   </button>
                 );
               })}
-              {userItemTypes.length > 8 && (
+              {userItemTypes.length > 6 && (
                 <button 
                   onClick={() => setShowAddForm(true)}
                   className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
@@ -585,7 +674,28 @@ const RadioRundownPro = () => {
         <div className={`grid gap-6 ${showClock ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
           {/* Rundown list - krijgt volledige breedte als klok verborgen is */}
           <div className={`${t.card} rounded-lg p-6 shadow border ${t.border} ${!showClock ? 'lg:col-span-1' : ''}`}>
-            <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>Rundown</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className={`text-xl font-semibold ${t.text}`}>Rundown</h2>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setUseNewItemForm(!useNewItemForm)}
+                  className={`${useNewItemForm ? t.button : t.buttonSecondary} px-3 py-1 rounded text-xs`}
+                  title={`Schakel naar ${useNewItemForm ? 'oude' : 'nieuwe'} form`}
+                >
+                  {useNewItemForm ? '🆕' : '📝'} Form
+                </button>
+                <button 
+                  onClick={() => window.debugDB && window.debugDB()}
+                  className={`${t.buttonSecondary} px-3 py-1 rounded text-xs`}
+                  title="Bekijk database inhoud in console (F12)"
+                >
+                  🔍 Debug DB
+                </button>
+                <span className={`text-xs ${t.textSecondary}`}>
+                  Items: {items.length}
+                </span>
+              </div>
+            </div>
             <RundownList 
               items={items}
               expandedItems={expandedItems}
@@ -726,7 +836,7 @@ const RadioRundownPro = () => {
       </div>
 
       {/* Forms */}
-      {showAddForm && (
+      {showAddForm && !useNewItemForm && (
         <ItemForm 
           onSave={addItem} 
           onCancel={() => setShowAddForm(false)}
@@ -737,8 +847,21 @@ const RadioRundownPro = () => {
           setIsSearchingSpotify={setIsSearchingSpotify}
         />
       )}
+
+      {showAddForm && useNewItemForm && (
+        <ItemFormNew
+          onSave={addItem} 
+          onCancel={() => setShowAddForm(false)}
+          theme={theme}
+          formatTimeShort={formatTimeShort}
+          parseTimeInput={parseTimeInput}
+          isSearchingSpotify={isSearchingSpotify}
+          setIsSearchingSpotify={setIsSearchingSpotify}
+          availableItemTypes={userItemTypes}
+        />
+      )}
       
-      {editingItem && (
+      {editingItem && !useNewItemForm && (
         <ItemForm 
           item={editingItem} 
           onSave={(updated) => updateItem(editingItem.id, updated)} 
@@ -748,6 +871,20 @@ const RadioRundownPro = () => {
           parseTimeInput={parseTimeInput}
           isSearchingSpotify={isSearchingSpotify}
           setIsSearchingSpotify={setIsSearchingSpotify}
+        />
+      )}
+
+      {editingItem && useNewItemForm && (
+        <ItemFormNew
+          item={editingItem} 
+          onSave={(updated) => updateItem(editingItem.id, updated)} 
+          onCancel={() => setEditingItem(null)}
+          theme={theme}
+          formatTimeShort={formatTimeShort}
+          parseTimeInput={parseTimeInput}
+          isSearchingSpotify={isSearchingSpotify}
+          setIsSearchingSpotify={setIsSearchingSpotify}
+          availableItemTypes={userItemTypes}
         />
       )}
 
@@ -762,7 +899,7 @@ const RadioRundownPro = () => {
       )}
 
       {/* Footer */}
-      <footer className={`mt-8 py-4 border-t ${t.border}`}>
+      <footer className={`mt-8 py-4 border-t ${t.border} ${t.bg}`}>
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
             <div className={`text-sm ${t.textSecondary}`}>
@@ -779,13 +916,9 @@ const RadioRundownPro = () => {
           </div>
         </div>
       </footer>
+      </div>
     </div>
   );
 };
 
 export default RadioRundownPro;
-
-// Debug effect voor userItemTypes
-useEffect(() => {
-  console.log('🔄 userItemTypes state updated:', userItemTypes);
-}, [userItemTypes]);

@@ -45,15 +45,25 @@ const RundownItem = ({
 
   const handlePlayPreview = (e) => {
     e.stopPropagation();
-    if (!item.spotify_preview_url) return;
+    console.log('Preview clicked for:', item.title, 'URL:', item.spotify_preview_url);
+    
+    if (!item.spotify_preview_url) {
+      console.warn('No preview URL available');
+      return;
+    }
 
     if (isPlaying) {
       audioRef.current?.pause();
       setIsPlaying(false);
+      console.log('Audio paused');
     } else {
       if (audioRef.current) {
-        audioRef.current.play();
-        setIsPlaying(true);
+        audioRef.current.play().then(() => {
+          setIsPlaying(true);
+          console.log('Audio started playing');
+        }).catch(error => {
+          console.error('Error playing audio:', error);
+        });
       }
     }
   };
@@ -135,7 +145,7 @@ const RundownItem = ({
           {item.type === 'music' && item.spotify_preview_url && (
             <button 
               onClick={handlePlayPreview}
-              className={`p-2 rounded-full ${isPlaying ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} hover:bg-green-400 transition-colors`}
+              className={`p-2 rounded-full ${isPlaying ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'} hover:bg-green-400 transition-colors`}
               title="Speel 30 seconden preview"
             >
               {isPlaying ? <Pause size={14} /> : <Play size={14} />}
@@ -145,8 +155,8 @@ const RundownItem = ({
           {/* Debug: toon preview icon als er geen URL is maar het wel een muziek item is */}
           {item.type === 'music' && !item.spotify_preview_url && (
             <div 
-              className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-400"
-              title="Geen Spotify preview beschikbaar - zoek opnieuw via Spotify"
+              className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-400 text-xs"
+              title="Geen Spotify preview - bewerk item en zoek via Spotify om preview toe te voegen"
             >
               🎵
             </div>

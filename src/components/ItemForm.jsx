@@ -78,6 +78,7 @@ const ItemForm = ({
   };
 
   const selectSpotifyResult = (result) => {
+    console.log('Selected Spotify result:', result);
     setForm({ 
       ...form, 
       title: result.name, 
@@ -88,6 +89,13 @@ const ItemForm = ({
     setShowLocal(false);
     setLocalResults([]);
     setSearchQuery('');
+    
+    // Show user feedback
+    if (result.preview_url) {
+      console.log('Preview URL saved:', result.preview_url);
+    } else {
+      console.warn('No preview URL available for this track');
+    }
   };
 
   const handleSubmit = () => {
@@ -189,6 +197,8 @@ const ItemForm = ({
                           <div className={`font-medium ${t.text}`}>{result.name}</div>
                           <div className={`text-sm ${t.textSecondary}`}>
                             {result.artist} • {formatTimeShort(result.duration)}
+                            {result.preview_url && <span className="ml-2 text-green-500">🎵 Preview</span>}
+                            {!result.preview_url && <span className="ml-2 text-gray-400">⚠️ Geen preview</span>}
                           </div>
                         </div>
                         <Check size={16} className="text-green-500" />

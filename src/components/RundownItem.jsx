@@ -18,7 +18,9 @@ const RundownItem = ({
   onDrop
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [playingAudioId, setPlayingAudioId] = useState(null);
   const audioRef = useRef(null);
+  const gameAudioRefs = useRef({});
   const t = theme === 'light' ? {
     card: 'bg-white',
     text: 'text-gray-900',
@@ -70,6 +72,50 @@ const RundownItem = ({
 
   const handleAudioEnded = () => {
     setIsPlaying(false);
+  };
+
+  const handleGameAudioPlay = (audioFile, e) => {
+    e.stopPropagation();
+    
+    // Stop any currently playing game audio
+    Object.values(gameAudioRefs.current).forEach(audio => {
+      if (audio && !audio.paused) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    });
+    
+    // Stop spotify preview if playing
+    if (isPlaying && audioRef.current) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+    
+    const audioId = audioFile.id;
+    
+    if (playingAudioId === audioId) {
+      // Stop current audio
+      setPlayingAudioId(null);
+      return;
+    }
+    
+    // Create or get audio element for this file
+    if (!gameAudioRefs.current[audioId]) {
+      gameAudioRefs.current[audioId] = new Audio(audioFile.data);
+      gameAudioRefs.current[audioId].volume = 0.7;
+      
+      gameAudioRefs.current[audioId].addEventListener('ended', () => {
+        setPlayingAudioId(null);
+      });
+    }
+    
+    // Play the audio
+    gameAudioRefs.current[audioId].play().then(() => {
+      setPlayingAudioId(audioId);
+    }).catch(error => {
+      console.error('Game audio play failed:', error);
+      alert('Kan geluidseffect niet afspelen');
+    });
   };
 
   return (
@@ -127,6 +173,43 @@ const RundownItem = ({
                     )}
                   </div>
                 )}
+              </div>
+            )}
+            
+            {/* Game audio files */}
+            {item.type === 'game' && item.audio_files && item.audio_files.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                <div className={`text-xs font-semibold mb-2 ${t.textSecondary}`}>
+                  🎵 Geluidseffectjes ({item.audio_files.length}):
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {item.audio_files.map((audioFile) => (
+                    <div
+                      key={audioFile.id}
+                      className={`flex items-center justify-between p-2 rounded border ${t.border} bg-gray-50 dark:bg-gray-700`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className={`text-xs font-medium truncate ${t.text}`}>
+                          {audioFile.name}
+                        </div>
+                        <div className={`text-xs ${t.textSecondary}`}>
+                          {Math.round(audioFile.size / 1024)}KB
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => handleGameAudioPlay(audioFile, e)}
+                        className={`ml-2 p-1 rounded-full text-white text-xs ${
+                          playingAudioId === audioFile.id
+                            ? 'bg-red-500 hover:bg-red-600'
+                            : 'bg-green-500 hover:bg-green-600'
+                        } transition-colors`}
+                        title={playingAudioId === audioFile.id ? 'Stop' : 'Afspelen'}
+                      >
+                        {playingAudioId === audioFile.id ? '⏹️' : '▶️'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

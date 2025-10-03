@@ -23,7 +23,8 @@ const ItemForm = ({
     color: '#ef4444',
     connection_type: '',
     phone_number: '',
-    spotify_preview_url: null
+    spotify_preview_url: null,
+    audio_files: [] // Voor spel audio bestanden
   });
 
   const [localResults, setLocalResults] = useState([]);
@@ -31,6 +32,7 @@ const ItemForm = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [previewAudio, setPreviewAudio] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [uploadingAudio, setUploadingAudio] = useState(false);
 
   const t = theme === 'light' ? {
     card: 'bg-white',
@@ -226,6 +228,101 @@ const ItemForm = ({
     // Stop any playing preview
     stopPreview();
     onCancel();
+  };
+
+  // Audio file handling for game type
+  const handleAudioUpload = async (event) => {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+    
+    // Check if total files would exceed 4
+    const currentFiles = form.audio_files || [];
+    if (currentFiles.length + files.length > 4) {
+      alert('Maximaal 4 audiobestanden toegestaan');
+      return;
+    }
+    
+    setUploadingAudio(true);
+    
+    try {
+      const newAudioFiles = [];
+      
+      for (const file of files) {
+        // Validate file type
+        if (!file.type.startsWith('audio/')) {
+          alert(`${file.name} is geen geldig audiobestand`);
+          continue;
+        }
+        
+        // Validate file size (max 5MB per file)
+        if (file.size > 5 * 1024 * 1024) {
+          alert(`${file.name} is te groot (max 5MB per bestand)`);
+          continue;
+        }
+        
+        // Convert to base64 for storage
+        const base64 = await convertToBase64(file);
+        
+        newAudioFiles.push({
+          id: Date.now() + Math.random(), // Simple unique ID
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          data: base64
+        });
+      }
+      
+      setForm({
+        ...form,
+        audio_files: [...currentFiles, ...newAudioFiles]
+      });
+      
+    } catch (error) {
+      console.error('Audio upload error:', error);
+      alert('Fout bij uploaden van audiobestanden');
+    } finally {
+      setUploadingAudio(false);
+    }
+  };
+  
+  const convertToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+    });
+  };
+  
+  const removeAudioFile = (fileId) => {
+    setForm({
+      ...form,
+      audio_files: (form.audio_files || []).filter(file => file.id !== fileId)
+    });
+  };
+  
+  const playAudioFile = (audioFile) => {
+    // Stop any currently playing audio
+    if (previewAudio) {
+      previewAudio.pause();
+      previewAudio.currentTime = 0;
+    }
+    
+    const audio = new Audio(audioFile.data);
+    audio.volume = 0.7;
+    
+    audio.addEventListener('ended', () => {
+      setIsPlaying(false);
+      setPreviewAudio(null);
+    });
+    
+    audio.play().then(() => {
+      setIsPlaying(true);
+      setPreviewAudio(audio);
+    }).catch(error => {
+      console.error('Audio play error:', error);
+      alert('Kan audiobestand niet afspelen');
+    });
   };
 
   return (
@@ -520,6 +617,84 @@ const ItemForm = ({
                       />
                     </div>
                   )}
+                </>
+              )}
+
+              {/* Audio bestanden voor spel */}
+              {form.type === 'game' && (
+                <>
+                  <div>
+                    <label className={`block text-sm mb-1 ${t.text}`}>Geluidseffectjes (max 4 bestanden)</label>
+                    
+                    {/* Upload button */}
+                    <div className="mb-3">
+                      <input
+                        type="file"
+                        id="audio-upload"
+                        multiple
+                        accept="audio/*"
+                        onChange={handleAudioUpload}
+                        className="hidden"
+                        disabled={uploadingAudio || (form.audio_files || []).length >= 4}
+                      />
+                      <label
+                        htmlFor="audio-upload"
+                        className={`inline-flex items-center px-4 py-2 rounded cursor-pointer ${
+                          uploadingAudio || (form.audio_files || []).length >= 4
+                            ? 'bg-gray-300 cursor-not-allowed' 
+                            : t.button
+                        }`}
+                      >
+                        {uploadingAudio ? '⏳ Uploaden...' : '📁 Audio Toevoegen'}
+                      </label>
+                      <div className={`text-xs mt-1 ${t.textSecondary}`}>
+                        Ondersteunde formaten: MP3, WAV, OGG, AAC (max 5MB per bestand)
+                      </div>
+                    </div>
+
+                    {/* Uploaded files list */}
+                    {form.audio_files && form.audio_files.length > 0 && (
+                      <div className="space-y-2">
+                        <div className={`text-sm font-medium ${t.text}`}>
+                          Geüploade bestanden ({form.audio_files.length}/4):
+                        </div>
+                        {form.audio_files.map((audioFile) => (
+                          <div
+                            key={audioFile.id}
+                            className={`p-3 rounded border ${t.border} bg-gray-50 dark:bg-gray-800`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className={`font-medium text-sm ${t.text}`}>
+                                  🎵 {audioFile.name}
+                                </div>
+                                <div className={`text-xs ${t.textSecondary}`}>
+                                  {Math.round(audioFile.size / 1024)}KB • {audioFile.type}
+                                </div>
+                              </div>
+                              <div className="flex gap-2 ml-3">
+                                <button
+                                  type="button"
+                                  onClick={() => playAudioFile(audioFile)}
+                                  disabled={isPlaying}
+                                  className={`px-2 py-1 rounded text-xs ${t.button} disabled:opacity-50`}
+                                >
+                                  ▶️
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeAudioFile(audioFile.id)}
+                                  className={`px-2 py-1 rounded text-xs bg-red-500 hover:bg-red-600 text-white`}
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
 

@@ -105,7 +105,7 @@ const RadioRundownPro = () => {
         isPlaying,
         totalDuration: items.reduce((sum, item) => sum + item.duration, 0)
       };
-      clockWindow.postMessage(clockData, '*');
+      clockWindow.postMessage({ type: 'CLOCK_UPDATE', data: clockData }, '*');
     }
   }, [clockWindow, items, currentTime, isPlaying]);
 

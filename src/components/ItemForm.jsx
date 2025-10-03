@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Check } from 'lucide-react';
 import { searchSpotifyTrack } from '../spotifyClient';
 
@@ -29,6 +29,8 @@ const ItemForm = ({
   const [localResults, setLocalResults] = useState([]);
   const [showLocal, setShowLocal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [previewAudio, setPreviewAudio] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const t = theme === 'light' ? {
     card: 'bg-white',
@@ -98,10 +100,76 @@ const ItemForm = ({
     }
   };
 
+  const playPreview = (previewUrl) => {
+    if (!previewUrl) {
+      alert('Geen preview beschikbaar voor dit nummer');
+      return;
+    }
+
+    // Stop current audio if playing
+    if (previewAudio) {
+      previewAudio.pause();
+      previewAudio.currentTime = 0;
+    }
+
+    // Create new audio element
+    const audio = new Audio(previewUrl);
+    audio.volume = 0.5; // 50% volume
+    
+    audio.addEventListener('loadeddata', () => {
+      audio.play().then(() => {
+        setIsPlaying(true);
+        setPreviewAudio(audio);
+      }).catch(error => {
+        console.error('Preview afspelen mislukt:', error);
+        alert('Preview kan niet worden afgespeeld. Mogelijk geblokkeerd door browser of geen preview beschikbaar.');
+      });
+    });
+
+    audio.addEventListener('ended', () => {
+      setIsPlaying(false);
+      setPreviewAudio(null);
+    });
+
+    audio.addEventListener('error', (e) => {
+      console.error('Audio error:', e);
+      alert('Preview kan niet worden geladen. Controleer je internetverbinding.');
+      setIsPlaying(false);
+      setPreviewAudio(null);
+    });
+  };
+
+  const stopPreview = () => {
+    if (previewAudio) {
+      previewAudio.pause();
+      previewAudio.currentTime = 0;
+      setIsPlaying(false);
+      setPreviewAudio(null);
+    }
+  };
+
+  // Cleanup audio when component unmounts
+  useEffect(() => {
+    return () => {
+      if (previewAudio) {
+        previewAudio.pause();
+        previewAudio.currentTime = 0;
+      }
+    };
+  }, [previewAudio]);
+
   const handleSubmit = () => {
     if (form.title) {
+      // Stop any playing preview
+      stopPreview();
       onSave(form);
     }
+  };
+
+  const handleCancel = () => {
+    // Stop any playing preview
+    stopPreview();
+    onCancel();
   };
 
   return (
@@ -188,21 +256,47 @@ const ItemForm = ({
                 {showLocal && localResults.length > 0 && (
                   <div className={`mt-2 border rounded ${t.border}`}>
                     {localResults.map((result, idx) => (
-                      <button 
+                      <div 
                         key={idx} 
-                        onClick={() => selectSpotifyResult(result)} 
-                        className={`w-full text-left px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900 flex items-center justify-between border-b last:border-b-0 ${t.border}`}
+                        className={`w-full px-4 py-3 border-b last:border-b-0 ${t.border}`}
                       >
-                        <div className="flex-1">
-                          <div className={`font-medium ${t.text}`}>{result.name}</div>
-                          <div className={`text-sm ${t.textSecondary}`}>
-                            {result.artist} • {formatTimeShort(result.duration)}
-                            {result.preview_url && <span className="ml-2 text-green-500">🎵 Preview</span>}
-                            {!result.preview_url && <span className="ml-2 text-gray-400">⚠️ Geen preview</span>}
-                          </div>
+                        <div className="flex items-center justify-between">
+                          <button 
+                            onClick={() => selectSpotifyResult(result)} 
+                            className={`flex-1 text-left hover:bg-blue-50 dark:hover:bg-blue-900 p-2 rounded`}
+                          >
+                            <div className={`font-medium ${t.text}`}>{result.name}</div>
+                            <div className={`text-sm ${t.textSecondary}`}>
+                              {result.artist} • {formatTimeShort(result.duration)}
+                              {result.preview_url && <span className="ml-2 text-green-500">🎵 Preview</span>}
+                              {!result.preview_url && <span className="ml-2 text-yellow-500">⚠️ Geen preview</span>}
+                            </div>
+                          </button>
+                          
+                          {/* Preview buttons */}
+                          {result.preview_url && (
+                            <div className="flex gap-2 ml-2">
+                              <button
+                                type="button"
+                                onClick={() => playPreview(result.preview_url)}
+                                disabled={isPlaying}
+                                className={`px-2 py-1 rounded text-xs ${t.button} disabled:opacity-50`}
+                              >
+                                ▶️ Preview
+                              </button>
+                              {isPlaying && (
+                                <button
+                                  type="button"
+                                  onClick={stopPreview}
+                                  className={`px-2 py-1 rounded text-xs ${t.buttonSecondary}`}
+                                >
+                                  ⏹️ Stop
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <Check size={16} className="text-green-500" />
-                      </button>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -224,6 +318,32 @@ const ItemForm = ({
               className={`w-full px-3 py-2 rounded border font-mono ${t.input}`} 
             />
           </div>
+
+          {/* Preview speler voor geselecteerd nummer */}
+          {form.type === 'music' && form.spotify_preview_url && (
+            <div className={`p-3 rounded border ${t.border} bg-green-50 dark:bg-green-900`}>
+              <div className={`text-sm font-medium mb-2 ${t.text}`}>🎵 Preview beschikbaar</div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => playPreview(form.spotify_preview_url)}
+                  disabled={isPlaying}
+                  className={`px-3 py-1 rounded text-sm ${t.button} disabled:opacity-50`}
+                >
+                  {isPlaying ? '🔊 Afspelen...' : '▶️ Luister Preview'}
+                </button>
+                {isPlaying && (
+                  <button
+                    type="button"
+                    onClick={stopPreview}
+                    className={`px-3 py-1 rounded text-sm ${t.buttonSecondary}`}
+                  >
+                    ⏹️ Stop
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Kleur */}
           <div>
@@ -317,7 +437,7 @@ const ItemForm = ({
             Opslaan
           </button>
           <button 
-            onClick={onCancel} 
+            onClick={handleCancel} 
             className={`flex-1 px-6 py-3 rounded-lg font-medium ${t.buttonSecondary}`}
           >
             Annuleren

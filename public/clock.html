@@ -24,19 +24,33 @@
       }
     </style>
   </head>
-  <body class="bg-black text-white flex items-center justify-center min-h-screen">
-    <div id="clock-container" class="text-center">
+  <body class="bg-black text-white flex flex-col items-center justify-center min-h-screen p-4">
+    <div id="clock-container" class="text-center max-w-7xl w-full">
       <div class="text-6xl font-mono font-bold mb-8" id="time-display">
         00:00:00 / 01:00:00
       </div>
       <div class="text-2xl mb-8" id="total-display">
         Totaal: 00:00:00
       </div>
-      <svg id="clock-svg" width="600" height="600" class="mx-auto mb-8">
-        <!-- Clock will be drawn here -->
-      </svg>
-      <div class="text-xl" id="status-display">
-        ⏸️ Gestopt
+      
+      <div class="flex gap-8 items-start justify-center">
+        <!-- Clock -->
+        <div class="flex-shrink-0">
+          <svg id="clock-svg" width="600" height="600" class="mx-auto">
+            <!-- Clock will be drawn here -->
+          </svg>
+          <div class="text-xl mt-4" id="status-display">
+            ⏸️ Gestopt
+          </div>
+        </div>
+        
+        <!-- Items list -->
+        <div class="w-96 max-h-96 overflow-y-auto bg-gray-800 rounded-lg p-4">
+          <h3 class="text-xl font-bold mb-4 text-white">📻 Rundown Items</h3>
+          <div id="items-list" class="space-y-2">
+            <!-- Items will be populated here -->
+          </div>
+        </div>
       </div>
     </div>
 
@@ -81,8 +95,57 @@
         document.getElementById('status-display').textContent = 
           clockData.isPlaying ? '▶️ Afspelen' : '⏸️ Gestopt';
 
+        // Update items list
+        updateItemsList();
+
         // Draw clock
         drawClock();
+      }
+
+      function updateItemsList() {
+        const itemsList = document.getElementById('items-list');
+        itemsList.innerHTML = '';
+        
+        let cumulativeTime = 0;
+        clockData.items.forEach((item, index) => {
+          const itemDiv = document.createElement('div');
+          const isActive = clockData.currentTime >= cumulativeTime && clockData.currentTime < cumulativeTime + item.duration;
+          
+          itemDiv.className = `p-3 rounded-lg border-l-4 ${isActive ? 'bg-blue-900 border-blue-400' : 'bg-gray-700 border-gray-500'}`;
+          itemDiv.style.borderLeftColor = item.color;
+          
+          const typeEmoji = {
+            music: '🎵',
+            talk: '🎙️', 
+            reportage: '⭐',
+            live: '📡',
+            game: '🎮',
+            jingle: '🔔'
+          };
+          
+          itemDiv.innerHTML = `
+            <div class="flex justify-between items-start">
+              <div class="flex-1">
+                <div class="font-semibold text-white flex items-center gap-2">
+                  ${typeEmoji[item.type] || '📄'} ${item.title}
+                </div>
+                ${item.artist ? `<div class="text-gray-300 text-sm">${item.artist}</div>` : ''}
+                <div class="text-gray-400 text-xs">
+                  ${formatTimeShort(item.duration)} | ${formatTime(cumulativeTime)} - ${formatTime(cumulativeTime + item.duration)}
+                </div>
+              </div>
+            </div>
+          `;
+          
+          itemsList.appendChild(itemDiv);
+          cumulativeTime += item.duration;
+        });
+      }
+
+      function formatTimeShort(seconds) {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return m + ':' + (s < 10 ? '0' : '') + s;
       }
 
       function drawClock() {
@@ -94,9 +157,9 @@
         // Clear previous content
         svg.innerHTML = '';
 
-        // Draw segments
+        // Draw segments with titles
         let acc = 0;
-        clockData.items.forEach((item) => {
+        clockData.items.forEach((item, index) => {
           const start = acc;
           const end = acc + item.duration;
           if (start >= hourDuration) return;
@@ -122,6 +185,33 @@
           pathElement.setAttribute('stroke-width', '2');
           pathElement.setAttribute('opacity', '0.8');
           svg.appendChild(pathElement);
+          
+          // Add title text in segment if segment is large enough
+          if (angle > 15) { // Only show text for segments larger than 15 degrees
+            const midAngle = startA + angle / 2;
+            const midRad = midAngle * Math.PI / 180;
+            const textRadius = radius * 0.7; // Position text at 70% of radius
+            const textX = center + textRadius * Math.cos(midRad);
+            const textY = center + textRadius * Math.sin(midRad);
+            
+            // Create text element
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', textX);
+            text.setAttribute('y', textY);
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('dominant-baseline', 'middle');
+            text.setAttribute('class', 'text-xs font-bold fill-white drop-shadow-lg');
+            text.setAttribute('transform', `rotate(${midAngle + 90}, ${textX}, ${textY})`);
+            
+            // Truncate title if too long
+            let displayTitle = item.title;
+            if (displayTitle.length > 12) {
+              displayTitle = displayTitle.substring(0, 10) + '...';
+            }
+            
+            text.textContent = displayTitle;
+            svg.appendChild(text);
+          }
           
           acc += item.duration;
         });

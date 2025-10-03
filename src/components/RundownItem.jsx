@@ -187,53 +187,6 @@ const RundownItem = ({
                 )}
               </div>
             )}
-            
-            {/* Game audio files */}
-            {item.type === 'game' && item.audio_files && item.audio_files.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-                <div className={`text-xs font-semibold mb-2 ${t.textSecondary} flex items-center justify-between`}>
-                  <span>🎵 Geluidseffectjes ({item.audio_files.length}):</span>
-                  <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 px-2 py-1 rounded">
-                    Sneltoetsen: 1-{Math.min(item.audio_files.length, 4)}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {item.audio_files.map((audioFile, fileIndex) => (
-                    <div
-                      key={audioFile.id}
-                      onClick={(e) => handleGameAudioPlay(audioFile, e)}
-                      className={`flex items-center justify-between p-2 rounded border ${t.border} bg-gray-50 dark:bg-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors ${
-                        playingAudioId === audioFile.id ? 'ring-2 ring-green-500' : ''
-                      }`}
-                      title={`Klik om af te spelen (sneltoets: ${fileIndex + 1}) - ${playingAudioId === audioFile.id ? 'Nu aan het spelen' : 'Klik om af te spelen'}`}
-                    >
-                      <div className="flex-1 min-w-0 flex items-center">
-                        <div className={`text-xs font-bold mr-2 ${t.textSecondary} bg-gray-200 dark:bg-gray-600 px-1 rounded`}>
-                          {fileIndex + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className={`text-xs font-medium truncate ${t.text}`}>
-                            {audioFile.name}
-                          </div>
-                          <div className={`text-xs ${t.textSecondary}`}>
-                            {Math.round(audioFile.size / 1024)}KB
-                          </div>
-                        </div>
-                      </div>
-                      <div
-                        className={`ml-2 p-1 rounded-full text-white text-xs ${
-                          playingAudioId === audioFile.id
-                            ? 'bg-red-500'
-                            : 'bg-green-500'
-                        } transition-colors pointer-events-none`}
-                      >
-                        {playingAudioId === audioFile.id ? '⏹️' : '▶️'}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
         <div className="flex gap-3">
@@ -242,7 +195,7 @@ const RundownItem = ({
               {formatTimeShort(item.duration)}
             </div>
             <div className={`text-xs font-mono ${t.textSecondary}`}>
-              tot {formatTime(getCumulativeTime(index))}
+              totaal {formatTime(getCumulativeTime(index))}
             </div>
           </div>
           
@@ -292,6 +245,52 @@ const RundownItem = ({
                   EERSTE WOORDEN:
                 </div>
                 <div>{item.first_words}</div>
+              </div>
+            )}
+            
+            {/* Game audio files - na eerste woorden */}
+            {item.type === 'game' && item.audio_files && item.audio_files.length > 0 && (
+              <div className="mb-3">
+                <div className={`text-xs font-semibold mb-2 ${t.textSecondary} flex items-center justify-between`}>
+                  <span>🎵 Geluidseffectjes ({item.audio_files.length}):</span>
+                  <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 px-2 py-1 rounded">
+                    Sneltoetsen: 1-{Math.min(item.audio_files.length, 4)}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {item.audio_files.map((audioFile, fileIndex) => (
+                    <div
+                      key={audioFile.id}
+                      data-audio-id={audioFile.id}
+                      onClick={(e) => handleGameAudioPlay(audioFile, e)}
+                      className={`flex items-center justify-between p-2 rounded border ${t.border} bg-gray-50 dark:bg-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors ${
+                        playingAudioId === audioFile.id ? 'ring-2 ring-green-500' : ''
+                      }`}
+                      title={`Klik om af te spelen (sneltoets: ${fileIndex + 1}) - ${playingAudioId === audioFile.id ? 'Nu aan het spelen' : 'Klik om af te spelen'}`}
+                    >
+                      <div className="flex-1 min-w-0 flex items-center">
+                        <div className={`text-xs font-bold mr-2 ${t.textSecondary} bg-gray-200 dark:bg-gray-600 px-1 rounded`}>
+                          {fileIndex + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className={`text-xs font-medium truncate ${t.text}`}>
+                            {audioFile.name}
+                          </div>
+                          <div className={`text-xs ${t.textSecondary}`}>
+                            {Math.round(audioFile.size / 1024)}KB
+                          </div>
+                        </div>
+                      </div>
+                      <div className="ml-2">
+                        {playingAudioId === audioFile.id ? (
+                          <Pause size={14} className="text-green-600" />
+                        ) : (
+                          <Play size={14} className={t.textSecondary} />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             {item.notes && (

@@ -309,6 +309,39 @@ const RadioRundownPro = () => {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [isPlaying, totalDuration]);
 
+  // Keyboard shortcuts for game audio
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      // Only handle number keys 1-4 when no input is focused
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      
+      const keyNumber = parseInt(e.key);
+      if (keyNumber >= 1 && keyNumber <= 4) {
+        // Find the first expanded game item
+        const expandedGameItem = items.find(item => 
+          item.type === 'game' && 
+          expandedItems.has(item.id) && 
+          item.audio_files && 
+          item.audio_files.length >= keyNumber
+        );
+        
+        if (expandedGameItem) {
+          const audioFile = expandedGameItem.audio_files[keyNumber - 1];
+          console.log(`🎮 Keyboard shortcut ${keyNumber} triggered for audio:`, audioFile.name);
+          
+          // Find and click the audio button
+          const audioButton = document.querySelector(`[data-audio-id="${audioFile.id}"]`);
+          if (audioButton) {
+            audioButton.click();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [items, expandedItems]);
+
   // Print functionality
   const printRundown = () => {
     let content = 'RADIO DRAAIBOEK\n================\n\n';
@@ -319,7 +352,7 @@ const RadioRundownPro = () => {
       const cumTime = getCumulativeTime(index);
       content += (index + 1) + '. [' + item.type.toUpperCase() + '] ' + item.title + '\n';
       if (item.artist) content += '   Artiest: ' + item.artist + '\n';
-      content += '   Duur: ' + formatTimeShort(item.duration) + ' | Tot: ' + formatTime(cumTime) + '\n';
+      content += '   Duur: ' + formatTimeShort(item.duration) + ' | Totaal: ' + formatTime(cumTime) + '\n';
       if (item.connection_type) {
         content += '   Verbinding: ' + item.connection_type;
         if (item.phone_number && item.connection_type === 'Telefoon') content += ' (' + item.phone_number + ')';

@@ -22,7 +22,8 @@ const ItemForm = ({
     last_words: '',
     color: '#ef4444',
     connection_type: '',
-    phone_number: ''
+    phone_number: '',
+    spotify_preview_url: null
   });
 
   const [localResults, setLocalResults] = useState([]);

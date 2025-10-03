@@ -142,6 +142,16 @@ const RundownItem = ({
             </button>
           )}
           
+          {/* Debug: toon preview icon als er geen URL is maar het wel een muziek item is */}
+          {item.type === 'music' && !item.spotify_preview_url && (
+            <div 
+              className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-400"
+              title="Geen Spotify preview beschikbaar - zoek opnieuw via Spotify"
+            >
+              🎵
+            </div>
+          )}
+          
           <button 
             onClick={() => onEdit(item)} 
             className={t.textSecondary}

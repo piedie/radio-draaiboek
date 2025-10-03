@@ -1,4 +1,4 @@
-// src/App.jsx - Radio Rundown Pro v1.2 - Verbeterd en gerefactored
+// src/App.jsx - Radio Rundown Pro v2.1 - Verbeterd en gerefactored
 import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Copy, LogOut, Moon, Sun, FolderOpen, Trash2, Settings } from 'lucide-react';
 import { supabase } from './supabaseClient';
@@ -8,6 +8,11 @@ import ItemFormNew from './components/ItemFormNew';
 import ItemTypeManager from './components/ItemTypeManager';
 import RundownList from './components/RundownList';
 import { loadUserItemTypes, getItemTypeByName } from './utils/itemTypeManager';
+
+// Versie informatie
+const APP_VERSION = '2.1';
+const BUILD_DATE = '2025-10-04';
+const COPYRIGHT_YEAR = new Date().getFullYear();
 
 const RadioRundownPro = () => {
   const [theme, setTheme] = useState('light');
@@ -478,6 +483,26 @@ const RadioRundownPro = () => {
               onClick={() => setIsRegistering(!isRegistering)} 
               className={`w-full ${t.buttonSecondary} px-4 py-3 rounded-lg font-medium`}
             >
+              {isRegistering ? 'Al een account? Inloggen' : 'Nog geen account? Registreer'}
+            </button>
+          </div>
+          
+          {/* Login Footer */}
+          <div className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-700 text-center">
+            <div className={`text-xs ${t.textSecondary}`}>
+              © {COPYRIGHT_YEAR} Landstede MBO
+            </div>
+            <div className={`text-xs ${t.textSecondary} mt-1`}>
+              Radio Rundown Pro v{APP_VERSION}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Main app
+  return (
     <div className={`${t.bg} min-h-screen p-6`}>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
@@ -872,6 +897,26 @@ const RadioRundownPro = () => {
           onItemTypesChanged={handleItemTypesChanged}
         />
       )}
+
+      {/* Footer */}
+      <footer className={`mt-8 py-4 border-t ${t.border} ${t.bg}`}>
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+            <div className={`text-sm ${t.textSecondary}`}>
+              © {COPYRIGHT_YEAR} Landstede MBO. Alle rechten voorbehouden.
+            </div>
+            <div className="flex items-center gap-4">
+              <div className={`text-sm ${t.textSecondary}`}>
+                Radio Rundown Pro v{APP_VERSION}
+              </div>
+              <div className={`text-xs ${t.textSecondary}`}>
+                Build: {BUILD_DATE}
+              </div>
+            </div>
+          </div>
+        </div>
+      </footer>
+      </div>
     </div>
   );
 };

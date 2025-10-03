@@ -31,7 +31,6 @@ const RadioRundownPro = () => {
   
   // State voor klok weergave
   const [showClock, setShowClock] = useState(true);
-  const [showClockWindow, setShowClockWindow] = useState(false);
   const [clockWindow, setClockWindow] = useState(null);
   
   const [draggedItem, setDraggedItem] = useState(null);
@@ -39,6 +38,7 @@ const RadioRundownPro = () => {
   const [showJingleEditor, setShowJingleEditor] = useState(false);
   const [jingles, setJingles] = useState([]);
   const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const t = theme === 'light' ? {
     bg: 'bg-gray-50', card: 'bg-white', text: 'text-gray-900', textSecondary: 'text-gray-600',
@@ -363,15 +363,16 @@ const RadioRundownPro = () => {
     setShowPrintModal(false);
   };
 
-  // Popup klok window
-  const openClockWindow = () => {
-    setShowClockWindow(true);
-  };
-
   // Open klok in nieuw venster
   const openClockInNewWindow = () => {
     const newWindow = window.open('/clock.html', 'clockWindow', 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no');
     setClockWindow(newWindow);
+  };
+
+  // Toggle alle items in/uit
+  const toggleAllItems = () => {
+    const allExpanded = expandedItems.size === items.length && items.length > 0;
+    setExpandedItems(allExpanded ? new Set() : new Set(items.map(i => i.id)));
   };
 
   // Login screen
@@ -493,21 +494,15 @@ const RadioRundownPro = () => {
             </button>
             <button 
               onClick={() => setShowClock(!showClock)} 
-              className={`${t.button} px-4 py-2 rounded-lg flex items-center gap-2 text-sm`}
-            >
-              🕐 {showClock ? 'Verberg Klok' : 'Toon Klok'}
-            </button>
-            <button 
-              onClick={openClockWindow} 
               className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
             >
-              📺 Popup Klok
+              � Klok
             </button>
             <button 
               onClick={openClockInNewWindow} 
               className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
             >
-              🪟 Nieuw Venster
+              🪟 Klokvenster
             </button>
             <button 
               onClick={() => setShowPrintModal(true)} 
@@ -516,16 +511,16 @@ const RadioRundownPro = () => {
               🖨️ Print
             </button>
             <button 
-              onClick={() => setExpandedItems(new Set(items.map(i => i.id)))} 
+              onClick={toggleAllItems} 
               className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
             >
-              ⬇️ Alles uit
+              {expandedItems.size === items.length && items.length > 0 ? '⬆️ Alles in' : '⬇️ Alles uit'}
             </button>
             <button 
-              onClick={() => setExpandedItems(new Set())} 
+              onClick={() => setShowSettings(true)} 
               className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
             >
-              ⬆️ Alles in
+              ⚙️ Instellingen
             </button>
           </div>
           
@@ -656,32 +651,6 @@ const RadioRundownPro = () => {
           )}
         </div>
 
-        {/* Popup klok window */}
-        {showClockWindow && (
-          <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
-            <div className={`${t.card} rounded-lg p-8 shadow-2xl max-w-2xl w-full`}>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className={`text-2xl font-bold ${t.text}`}>🕐 Uitzending Klok</h2>
-                <button 
-                  onClick={() => setShowClockWindow(false)} 
-                  className={`${t.buttonSecondary} px-4 py-2 rounded-lg`}
-                >
-                  Sluiten
-                </button>
-              </div>
-              <Clock 
-                items={items}
-                currentTime={currentTime}
-                isPlaying={isPlaying}
-                setIsPlaying={setIsPlaying}
-                theme={theme}
-                formatTime={formatTime}
-                formatTimeShort={formatTimeShort}
-              />
-            </div>
-          </div>
-        )}
-
         {/* Jingle editor modal */}
         {showJingleEditor && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -755,6 +724,35 @@ const RadioRundownPro = () => {
                     Annuleren
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Instellingen modal */}
+        {showSettings && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className={`${t.card} p-6 rounded-lg w-96 shadow-2xl`}>
+              <h3 className={`text-lg font-bold mb-4 ${t.text}`}>⚙️ Instellingen</h3>
+              <div className="space-y-4">
+                <div className={`text-sm ${t.textSecondary}`}>
+                  Deze pagina wordt later uitgebreid met verschillende instellingen zoals:
+                </div>
+                <div className={`text-sm ${t.text} space-y-2`}>
+                  <div>• 📻 Station instellingen</div>
+                  <div>• 🎵 Spotify configuratie</div>
+                  <div>• 🕐 Klok voorkeuren</div>
+                  <div>• 🎨 Interface aanpassingen</div>
+                  <div>• 📱 Export instellingen</div>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-6">
+                <button 
+                  onClick={() => setShowSettings(false)} 
+                  className={`${t.buttonSecondary} px-4 py-2 rounded flex-1`}
+                >
+                  Sluiten
+                </button>
               </div>
             </div>
           </div>

@@ -59,9 +59,19 @@ const ItemTypeManager = ({
       setLoading(true);
       const types = await loadUserItemTypes(currentUser.id);
       setItemTypes(types);
+      
+      // Check of we alleen standaard types hebben (geen database migratie)
+      const hasCustomTypes = types.some(type => type.is_custom);
+      if (!hasCustomTypes && types.length === DEFAULT_ITEM_TYPES.length) {
+        console.log('⚠️ Alleen standaard types geladen - mogelijk geen database migratie uitgevoerd');
+      }
     } catch (error) {
       console.error('Error loading item types:', error);
-      alert('Fout bij laden van item types');
+      if (error.message.includes('user_item_types')) {
+        alert('Database migratie vereist! Voer eerst database_migration.sql uit in Supabase.');
+      } else {
+        alert('Fout bij laden van item types: ' + error.message);
+      }
     } finally {
       setLoading(false);
     }

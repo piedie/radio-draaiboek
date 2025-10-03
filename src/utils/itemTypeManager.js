@@ -74,21 +74,36 @@ export const loadUserItemTypes = async (userId) => {
   try {
     console.log('🔄 Loading item types for user:', userId);
     
-    // Laad custom item types van gebruiker
-    const { data: customTypes, error } = await supabase
+    // Check of user_item_types tabel bestaat
+    const { data: tableCheck, error: tableError } = await supabase
       .from('user_item_types')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .order('display_name');
+      .select('id')
+      .limit(1);
     
-    if (error) {
-      console.error('❌ Error loading custom item types:', error);
-      throw error;
+    let customTypes = [];
+    
+    if (tableError && tableError.code === 'PGRST116') {
+      // Tabel bestaat niet, gebruik alleen standaard types
+      console.log('⚠️ user_item_types tabel bestaat niet, gebruik alleen standaard types');
+      console.log('💡 Voer database migratie uit om custom types te gebruiken');
+    } else {
+      // Tabel bestaat, laad custom types
+      const { data, error } = await supabase
+        .from('user_item_types')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('display_name');
+      
+      if (error) {
+        console.error('❌ Error loading custom item types:', error);
+      } else {
+        customTypes = data || [];
+      }
     }
     
     // Converteer custom types naar juiste format
-    const formattedCustomTypes = (customTypes || []).map(type => ({
+    const formattedCustomTypes = customTypes.map(type => ({
       id: type.id,
       name: type.name,
       display_name: type.display_name,

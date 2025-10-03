@@ -414,6 +414,17 @@ const RadioRundownPro = () => {
     window.debugDB = debugDatabaseContent;
   }, [currentRundownId]);
 
+  // Effect om te checken of database migratie is uitgevoerd
+  useEffect(() => {
+    if (userItemTypes.length > 0) {
+      const hasCustomTypes = userItemTypes.some(type => type.is_custom);
+      if (!hasCustomTypes && userItemTypes.length === 6) { // 6 = aantal standaard types
+        console.log('⚠️ Alleen standaard item types gevonden');
+        console.log('💡 Tip: Voer database_migration.sql uit in Supabase om custom types te gebruiken');
+      }
+    }
+  }, [userItemTypes]);
+  
   // Debug effect voor userItemTypes
   useEffect(() => {
     console.log('🔄 userItemTypes state updated:', userItemTypes);
@@ -467,17 +478,6 @@ const RadioRundownPro = () => {
               onClick={() => setIsRegistering(!isRegistering)} 
               className={`w-full ${t.buttonSecondary} px-4 py-3 rounded-lg font-medium`}
             >
-              {isRegistering ? 'Al een account? Inloggen' : 'Nog geen account? Registreren'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const currentRunbook = rundowns.find(r => r.id === currentRundownId);
-
-  return (
     <div className={`${t.bg} min-h-screen p-6`}>
       <div className="max-w-7xl mx-auto">
         {/* Header */}

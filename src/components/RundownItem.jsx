@@ -21,6 +21,18 @@ const RundownItem = ({
   const [playingAudioId, setPlayingAudioId] = useState(null);
   const audioRef = useRef(null);
   const gameAudioRefs = useRef({});
+  
+  // Debug logging voor items (alleen bij problemen)
+  if (!item.title && item.type === 'music') {
+    console.warn('⚠️ Music item without title:', item);
+  }
+  if (!item.notes && item.type === 'talk') {
+    console.warn('⚠️ Talk item without notes:', item);
+  }
+  if (!item.audio_files && item.type === 'game') {
+    console.warn('⚠️ Game item without audio_files:', item);
+  }
+  
   const t = theme === 'light' ? {
     card: 'bg-white',
     text: 'text-gray-900',

@@ -88,12 +88,41 @@ const RadioRundownPro = () => {
   };
 
   const loadRunbookItems = async (runbookId) => {
-    const { data } = await supabase.from('items').select('*').eq('runbook_id', runbookId).order('position');
-    if (data) setItems(data);
+    console.log('🔄 Loading items for runbook:', runbookId);
+    const { data, error } = await supabase.from('items').select('*').eq('runbook_id', runbookId).order('position');
+    
+    if (error) {
+      console.error('❌ Error loading items:', error);
+      return;
+    }
+    
+    console.log('✅ Loaded items:', data?.length || 0, 'items');
+    
+    // Normaliseer de data om null waarden te vervangen door lege strings/arrays
+    const normalizedData = data?.map(item => ({
+      ...item,
+      title: item.title || '',
+      artist: item.artist || '',
+      notes: item.notes || '',
+      first_words: item.first_words || '',
+      last_words: item.last_words || '',
+      connection_type: item.connection_type || '',
+      phone_number: item.phone_number || '',
+      audio_files: item.audio_files || []
+    })) || [];
+    
+    if (normalizedData && normalizedData.length > 0) {
+      console.log('📋 First item example (normalized):', normalizedData[0]);
+    }
+    
+    setItems(normalizedData);
   };
 
   useEffect(() => {
-    if (currentRundownId) loadRunbookItems(currentRundownId);
+    if (currentRundownId) {
+      console.log('🔄 CurrentRundownId changed to:', currentRundownId);
+      loadRunbookItems(currentRundownId);
+    }
   }, [currentRundownId]);
 
   // Sync data to clock window
@@ -167,13 +196,52 @@ const RadioRundownPro = () => {
   const addItem = async (item) => {
     if (!currentRundownId) return;
     const position = items.length;
-    const { data } = await supabase.from('items').insert([{ runbook_id: currentRundownId, ...item, position }]).select();
+    console.log('➕ Adding item:', item);
+    console.log('📌 To runbook:', currentRundownId);
+    
+    // Check for potential data size issues
+    if (item.audio_files && item.audio_files.length > 0) {
+      const totalSize = JSON.stringify(item.audio_files).length;
+      console.log('📊 Audio files data size:', totalSize, 'characters');
+      if (totalSize > 100000) { // 100KB
+        console.warn('⚠️ Large audio data detected, this might cause database issues');
+      }
+    }
+    
+    const { data, error } = await supabase.from('items').insert([{ runbook_id: currentRundownId, ...item, position }]).select();
+    
+    if (error) {
+      console.error('❌ Error adding item:', error);
+      alert('Fout bij opslaan: ' + error.message);
+      return;
+    }
+    
+    console.log('✅ Item added to database:', data[0]);
     if (data) setItems([...items, data[0]]);
     setShowAddForm(false);
   };
 
   const updateItem = async (id, updated) => {
-    await supabase.from('items').update(updated).eq('id', id);
+    console.log('🔄 Updating item:', id, 'with:', updated);
+    
+    // Check for potential data size issues
+    if (updated.audio_files && updated.audio_files.length > 0) {
+      const totalSize = JSON.stringify(updated.audio_files).length;
+      console.log('📊 Audio files data size:', totalSize, 'characters');
+      if (totalSize > 100000) { // 100KB
+        console.warn('⚠️ Large audio data detected, this might cause database issues');
+      }
+    }
+    
+    const { data, error } = await supabase.from('items').update(updated).eq('id', id).select();
+    
+    if (error) {
+      console.error('❌ Error updating item:', error);
+      alert('Fout bij bijwerken: ' + error.message);
+      return;
+    }
+    
+    console.log('✅ Item updated in database:', data[0]);
     setItems(items.map(item => item.id === id ? { ...item, ...updated } : item));
     setEditingItem(null);
   };
@@ -374,6 +442,44 @@ const RadioRundownPro = () => {
     const allExpanded = expandedItems.size === items.length && items.length > 0;
     setExpandedItems(allExpanded ? new Set() : new Set(items.map(i => i.id)));
   };
+
+  // Debug functie om database inhoud te checken
+  const debugDatabaseContent = async () => {
+    if (!currentRundownId) return;
+    console.log('🔍 Debug: Checking database content for runbook:', currentRundownId);
+    
+    const { data, error } = await supabase.from('items').select('*').eq('runbook_id', currentRundownId);
+    
+    if (error) {
+      console.error('❌ Error fetching debug data:', error);
+      return;
+    }
+    
+    console.log('📊 Database contains', data?.length || 0, 'items');
+    data?.forEach((item, index) => {
+      const emptyFields = [];
+      if (!item.title) emptyFields.push('title');
+      if (!item.artist && item.type === 'music') emptyFields.push('artist');
+      if (!item.notes && ['talk', 'reportage'].includes(item.type)) emptyFields.push('notes');
+      if (!item.first_words && ['talk', 'reportage', 'live'].includes(item.type)) emptyFields.push('first_words');
+      if (!item.last_words && ['talk', 'reportage', 'live'].includes(item.type)) emptyFields.push('last_words');
+      if (!item.audio_files && item.type === 'game') emptyFields.push('audio_files');
+      
+      console.log(`📋 Item ${index + 1}:`, {
+        id: item.id,
+        title: item.title || '❌ LEEG',
+        type: item.type,
+        emptyFields: emptyFields.length > 0 ? emptyFields : 'Geen',
+        audio_files_count: item.audio_files?.length || 0,
+        audio_files_size: item.audio_files ? JSON.stringify(item.audio_files).length : 0
+      });
+    });
+  };
+
+  // Maak debug functie beschikbaar in console
+  useEffect(() => {
+    window.debugDB = debugDatabaseContent;
+  }, [currentRundownId]);
 
   // Login screen
   if (showLogin) {
@@ -616,6 +722,19 @@ const RadioRundownPro = () => {
                   💡 Tip: Gebruik toetsen 1-4 om geluidseffectjes af te spelen
                 </div>
               )}
+              {/* Debug info */}
+              <div className="text-xs">
+                <button 
+                  onClick={() => window.debugDB && window.debugDB()}
+                  className={`${t.buttonSecondary} px-2 py-1 rounded text-xs mr-2`}
+                  title="Bekijk database inhoud in console (F12)"
+                >
+                  🔍 Debug DB
+                </button>
+                <span className={`${t.textSecondary}`}>
+                  Items: {items.length}
+                </span>
+              </div>
             </div>
             <RundownList 
               items={items}

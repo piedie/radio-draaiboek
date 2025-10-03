@@ -12,19 +12,35 @@ const ItemForm = ({
   isSearchingSpotify,
   setIsSearchingSpotify
 }) => {
-  const [form, setForm] = useState(item || {
-    type: 'music',
-    title: '',
-    artist: '',
-    duration: 180,
-    first_words: '',
-    notes: '',
-    last_words: '',
-    color: '#ef4444',
-    connection_type: '',
-    phone_number: '',
-    spotify_preview_url: null,
-    audio_files: [] // Voor spel audio bestanden
+  const [form, setForm] = useState(() => {
+    // Zorg ervoor dat alle velden default waarden hebben, ook als item null/undefined waarden bevat
+    const defaults = {
+      type: 'music',
+      title: '',
+      artist: '',
+      duration: 180,
+      first_words: '',
+      notes: '',
+      last_words: '',
+      color: '#ef4444',
+      connection_type: '',
+      phone_number: '',
+      spotify_preview_url: null,
+      audio_files: []
+    };
+    
+    if (!item) return defaults;
+    
+    // Merge item met defaults, maar zorg dat null/undefined waarden worden vervangen door defaults
+    const merged = { ...defaults };
+    Object.keys(item).forEach(key => {
+      if (item[key] !== null && item[key] !== undefined) {
+        merged[key] = item[key];
+      }
+    });
+    
+    console.log('🔄 ItemForm initialized with:', merged);
+    return merged;
   });
 
   const [localResults, setLocalResults] = useState([]);

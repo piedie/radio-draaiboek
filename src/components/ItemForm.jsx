@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Check } from 'lucide-react';
-import { searchSpotifyTrack } from '../spotifyClient';
+import { searchSpotifyTrack, testSpotifyAPI } from '../spotifyClient';
 
 const ItemForm = ({ 
   item, 
@@ -311,6 +311,21 @@ const ItemForm = ({
                 {/* Spotify resultaten */}
                 {showLocal && localResults.length > 0 && (
                   <div className={`mt-2 border rounded ${t.border}`}>
+                    {/* Warning if no previews available */}
+                    {localResults.filter(r => r.preview_url).length === 0 && (
+                      <div className="p-3 bg-yellow-50 dark:bg-yellow-900 border-b border-yellow-200 dark:border-yellow-700">
+                        <div className="text-yellow-800 dark:text-yellow-200 text-sm">
+                          ⚠️ <strong>Geen previews beschikbaar</strong><br/>
+                          Dit kan komen door:
+                          <ul className="text-xs mt-1 ml-4 list-disc">
+                            <li>Geografische restricties (niet beschikbaar in Nederland)</li>
+                            <li>Auteursrechten beperkingen</li>
+                            <li>Oudere nummers hebben vaak geen preview</li>
+                          </ul>
+                        </div>
+                      </div>
+                    )}
+                    
                     {localResults.map((result, idx) => (
                       <div 
                         key={idx} 
@@ -386,9 +401,16 @@ const ItemForm = ({
                     <button
                       type="button"
                       onClick={testAudioCapabilities}
+                      className={`mt-2 px-2 py-1 rounded text-xs ${t.buttonSecondary} mr-2`}
+                    >
+                      🔧 Test Audio
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => testSpotifyAPI()}
                       className={`mt-2 px-2 py-1 rounded text-xs ${t.buttonSecondary}`}
                     >
-                      🔧 Test Audio Mogelijkheden
+                      🎵 Test Spotify API
                     </button>
                   </div>
                 )}

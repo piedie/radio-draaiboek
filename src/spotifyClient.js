@@ -31,6 +31,45 @@ async function getSpotifyToken() {
   return spotifyToken
 }
 
+// Test function to check Spotify API status
+export async function testSpotifyAPI() {
+  try {
+    console.log('Testing Spotify API...');
+    
+    // Check credentials
+    console.log('Credentials check:', {
+      clientId: SPOTIFY_CLIENT_ID ? 'SET' : 'MISSING',
+      clientSecret: SPOTIFY_CLIENT_SECRET ? 'SET' : 'MISSING'
+    });
+    
+    // Get token
+    const token = await getSpotifyToken();
+    console.log('Token obtained:', !!token);
+    
+    // Test a simple search for a very popular song that should have a preview
+    const testQueries = ['The Beatles Yesterday', 'Ed Sheeran Shape of You', 'Billie Eilish bad guy'];
+    
+    for (const testQuery of testQueries) {
+      console.log(`\nTesting with: "${testQuery}"`);
+      const results = await searchSpotifyTrack(testQuery);
+      const withPreviews = results.filter(r => r.preview_url);
+      console.log(`Results: ${results.length}, With previews: ${withPreviews.length}`);
+      
+      if (withPreviews.length > 0) {
+        console.log('✅ Found tracks with previews! API is working.');
+        return true;
+      }
+    }
+    
+    console.log('❌ No previews found for any test queries. This might indicate a regional restriction or API issue.');
+    return false;
+    
+  } catch (error) {
+    console.error('Spotify API test failed:', error);
+    return false;
+  }
+}
+
 export async function searchSpotifyTrack(query) {
   try {
     // Debug: Check if credentials are available
@@ -44,14 +83,15 @@ export async function searchSpotifyTrack(query) {
 
     const token = await getSpotifyToken()
     
-    const response = await fetch(
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=5`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+    // Try different search parameters for better preview availability
+    const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10&market=NL&include_external=audio`;
+    console.log('Spotify search URL:', searchUrl);
+    
+    const response = await fetch(searchUrl, {
+      headers: {
+        'Authorization': `Bearer ${token}`
       }
-    )
+    })
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -65,10 +105,21 @@ export async function searchSpotifyTrack(query) {
 
     const data = await response.json()
     
+    // Debug: Log the full API response for first track
+    if (data.tracks.items.length > 0) {
+      console.log('Full Spotify API response for first track:', JSON.stringify(data.tracks.items[0], null, 2));
+    }
+    
     // Debug: Log preview URL availability
     const tracks = data.tracks.items.map(track => {
       const hasPreview = !!track.preview_url;
       console.log(`Track "${track.name}" by ${track.artists[0]?.name}: Preview ${hasPreview ? 'available' : 'NOT available'}`);
+      if (hasPreview) {
+        console.log(`  Preview URL: ${track.preview_url}`);
+      }
+      console.log(`  Markets: ${track.available_markets?.length || 0} countries`);
+      console.log(`  Explicit: ${track.explicit}`);
+      console.log(`  Track number: ${track.track_number}`);
       
       return {
         id: track.id,
@@ -84,7 +135,49 @@ export async function searchSpotifyTrack(query) {
     const previewCount = tracks.filter(t => t.preview_url).length;
     console.log(`Search results: ${tracks.length} tracks, ${previewCount} with previews`);
     
-    return tracks;
+    // If no tracks have previews, try a different search approach
+    if (previewCount === 0 && tracks.length > 0) {
+      console.log('No previews found, trying alternative search...');
+      
+      // Try searching for more popular/recent versions
+      const alternativeQuery = query + ' official';
+      const altResponse = await fetch(
+        `https://api.spotify.com/v1/search?q=${encodeURIComponent(alternativeQuery)}&type=track&limit=15&market=US`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (altResponse.ok) {
+        const altData = await altResponse.json();
+        const altTracks = altData.tracks.items.map(track => ({
+          id: track.id,
+          name: track.name,
+          artist: track.artists[0]?.name || '',
+          duration: Math.round(track.duration_ms / 1000),
+          album: track.album?.name || '',
+          image: track.album?.images[0]?.url || '',
+          preview_url: track.preview_url || null
+        }));
+        
+        const altPreviewCount = altTracks.filter(t => t.preview_url).length;
+        console.log(`Alternative search: ${altTracks.length} tracks, ${altPreviewCount} with previews`);
+        
+        if (altPreviewCount > 0) {
+          // Combine results, prioritizing tracks with previews
+          const tracksWithPreviews = altTracks.filter(t => t.preview_url);
+          const originalTracksWithoutDuplicates = tracks.filter(t => 
+            !altTracks.some(alt => alt.id === t.id)
+          );
+          
+          return [...tracksWithPreviews, ...originalTracksWithoutDuplicates].slice(0, 5);
+        }
+      }
+    }
+    
+    return tracks.slice(0, 5);
   } catch (error) {
     console.error('Spotify search error:', error)
     return []

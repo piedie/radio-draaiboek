@@ -98,6 +98,8 @@ export const loadUserItemTypes = async (userId) => {
       is_custom: true
     }));
     
+    console.log('🔄 Found custom types:', formattedCustomTypes);
+    
     // Combineer standaard types met custom types
     const allTypes = [
       ...DEFAULT_ITEM_TYPES.map(type => ({ ...type, is_custom: false })),

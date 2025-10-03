@@ -272,8 +272,11 @@ const RadioRundownPro = () => {
 
   // Callback voor wanneer item types worden aangepast
   const handleItemTypesChanged = async () => {
+    console.log('🔄 handleItemTypesChanged called');
     if (currentUser) {
+      console.log('🔄 Reloading item types for user:', currentUser.id);
       const itemTypes = await loadUserItemTypes(currentUser.id);
+      console.log('✅ Loaded updated item types:', itemTypes);
       setUserItemTypes(itemTypes);
     }
   };
@@ -411,6 +414,11 @@ const RadioRundownPro = () => {
     window.debugDB = debugDatabaseContent;
   }, [currentRundownId]);
 
+  // Debug effect voor userItemTypes
+  useEffect(() => {
+    console.log('🔄 userItemTypes state updated:', userItemTypes);
+  }, [userItemTypes]);
+  
   // Login screen
   if (showLogin) {
     return (
@@ -573,18 +581,21 @@ const RadioRundownPro = () => {
               </button>
             </div>
             <div className="flex gap-2 flex-wrap">
-              {userItemTypes.slice(0, 6).map(itemType => (
-                <button 
-                  key={itemType.name}
-                  onClick={() => quickAdd(itemType.name)} 
-                  className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
-                  style={{ 
-                    borderLeft: `3px solid ${itemType.color}`,
-                  }}
-                >
-                  {getItemTypeIcon(itemType.name)} {itemType.display_name}
-                </button>
-              ))}
+              {userItemTypes.slice(0, 6).map(itemType => {
+                console.log('🔄 Rendering quick-add button for:', itemType);
+                return (
+                  <button 
+                    key={itemType.name}
+                    onClick={() => quickAdd(itemType.name)} 
+                    className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
+                    style={{ 
+                      borderLeft: `3px solid ${itemType.color}`,
+                    }}
+                  >
+                    {getItemTypeIcon(itemType.name)} {itemType.display_name}
+                  </button>
+                );
+              })}
               {userItemTypes.length > 6 && (
                 <button 
                   onClick={() => setShowAddForm(true)}

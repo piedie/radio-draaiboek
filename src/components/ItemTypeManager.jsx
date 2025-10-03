@@ -144,11 +144,13 @@ const ItemTypeManager = ({
       await loadItemTypes();
       
       // Notify parent component
+      console.log('🔄 Notifying parent component about item types change');
       if (onItemTypesChanged) {
         onItemTypesChanged();
       }
 
       cancelEditing();
+      console.log('✅ Item type saved and UI updated');
       
     } catch (error) {
       console.error('Error saving item type:', error);

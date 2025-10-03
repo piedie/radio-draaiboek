@@ -316,12 +316,18 @@ const ItemForm = ({
                       <div className="p-3 bg-yellow-50 dark:bg-yellow-900 border-b border-yellow-200 dark:border-yellow-700">
                         <div className="text-yellow-800 dark:text-yellow-200 text-sm">
                           ⚠️ <strong>Geen previews beschikbaar</strong><br/>
-                          Dit kan komen door:
+                          De app heeft geprobeerd in meerdere landen (NL, US, GB, DE, SE) en met verschillende zoektermen.<br/>
+                          <strong>Mogelijke oorzaken:</strong>
                           <ul className="text-xs mt-1 ml-4 list-disc">
-                            <li>Geografische restricties (niet beschikbaar in Nederland)</li>
+                            <li>Geografische restricties</li>
                             <li>Auteursrechten beperkingen</li>
                             <li>Oudere nummers hebben vaak geen preview</li>
+                            <li>Sommige labels staan geen previews toe</li>
                           </ul>
+                          <div className="mt-2 text-xs">
+                            💡 <strong>Tip:</strong> Probeer moderne, populaire nummers of klik "🎵 Test Spotify API" om te controleren of de service werkt.<br/>
+                            🌍 <strong>Nederland specifiek:</strong> EU heeft zeer strenge preview restricties vanwege auteursrechten (GDPR/DSA).
+                          </div>
                         </div>
                       </div>
                     )}

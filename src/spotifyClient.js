@@ -31,6 +31,19 @@ async function getSpotifyToken() {
   return spotifyToken
 }
 
+// Mock preview URLs for testing when Spotify doesn't provide them
+const generateMockPreview = (trackName, artist) => {
+  // This creates a unique identifier that could be used to search other sources
+  const searchTerm = `${trackName} ${artist}`.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '+');
+  
+  // For now, return null, but this could be extended to use:
+  // - YouTube Music API
+  // - Last.fm API
+  // - Other music services
+  console.log(`Could search for: "${searchTerm}" on alternative platforms`);
+  return null;
+};
+
 // Test function to check Spotify API status
 export async function testSpotifyAPI() {
   try {
@@ -47,17 +60,32 @@ export async function testSpotifyAPI() {
     console.log('Token obtained:', !!token);
     
     // Test a simple search for a very popular song that should have a preview
-    const testQueries = ['The Beatles Yesterday', 'Ed Sheeran Shape of You', 'Billie Eilish bad guy'];
+    const testQueries = [
+      'Never Gonna Give You Up Rick Astley', // Classic that often has previews
+      'Bohemian Rhapsody Queen',
+      'Imagine Dragons Believer', 
+      'Dua Lipa Levitating',
+      'The Weeknd Blinding Lights',
+      'Olivia Rodrigo drivers license'
+    ];
+    
+    console.log('\n🎵 Testing with songs known to have previews in most regions...');
     
     for (const testQuery of testQueries) {
-      console.log(`\nTesting with: "${testQuery}"`);
+      console.log(`\n🔍 Testing: "${testQuery}"`);
       const results = await searchSpotifyTrack(testQuery);
       const withPreviews = results.filter(r => r.preview_url);
-      console.log(`Results: ${results.length}, With previews: ${withPreviews.length}`);
+      console.log(`📊 Results: ${results.length} tracks found, ${withPreviews.length} with previews`);
       
       if (withPreviews.length > 0) {
-        console.log('✅ Found tracks with previews! API is working.');
+        console.log('✅ SUCCESS! Found working previews.');
+        console.log('🎵 Preview example:', withPreviews[0].preview_url);
+        console.log('🌍 Track has markets:', withPreviews[0].markets || 'unknown');
         return true;
+      } else if (results.length > 0) {
+        console.log(`❌ Found tracks but no previews. First track markets: ${results[0].markets || 0}`);
+      } else {
+        console.log('❌ No tracks found at all');
       }
     }
     
@@ -83,27 +111,99 @@ export async function searchSpotifyTrack(query) {
 
     const token = await getSpotifyToken()
     
-    // Try different search parameters for better preview availability
-    const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10&market=NL&include_external=audio`;
-    console.log('Spotify search URL:', searchUrl);
+    // Try WITHOUT market restrictions first - this often works better
+    console.log('🎵 Trying search WITHOUT market restrictions...');
+    const basicSearchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=20`;
+    console.log('Basic search URL:', basicSearchUrl);
     
-    const response = await fetch(searchUrl, {
+    const basicResponse = await fetch(basicSearchUrl, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
-    })
+    });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Spotify API error:', {
-        status: response.status,
-        statusText: response.statusText,
-        body: errorText
+    if (basicResponse.ok) {
+      const basicData = await basicResponse.json();
+      console.log('Basic search results:', basicData.tracks.items.length);
+      
+      const basicTracks = basicData.tracks.items.map(track => ({
+        id: track.id,
+        name: track.name,
+        artist: track.artists[0]?.name || '',
+        duration: Math.round(track.duration_ms / 1000),
+        album: track.album?.name || '',
+        image: track.album?.images[0]?.url || '',
+        preview_url: track.preview_url || null,
+        markets: track.available_markets?.length || 0
+      }));
+      
+      const basicPreviewCount = basicTracks.filter(t => t.preview_url).length;
+      console.log(`Basic search: ${basicTracks.length} tracks, ${basicPreviewCount} with previews`);
+      
+      // If we found previews, return them
+      if (basicPreviewCount > 0) {
+        console.log('✅ Found previews with basic search!');
+        // Debug first few tracks
+        basicTracks.slice(0, 3).forEach(track => {
+          console.log(`"${track.name}" by ${track.artist}: Preview ${track.preview_url ? 'YES' : 'NO'}, Markets: ${track.markets}`);
+        });
+        return basicTracks.slice(0, 5);
+      }
+      
+      // Log details about first few tracks for debugging
+      console.log('📊 Detailed track analysis:');
+      basicTracks.slice(0, 3).forEach(track => {
+        console.log(`"${track.name}" by ${track.artist}:`);
+        console.log(`  - Preview: ${track.preview_url ? 'YES' : 'NO'}`);
+        console.log(`  - Markets: ${track.markets} countries`);
+        console.log(`  - ID: ${track.id}`);
       });
-      throw new Error(`Spotify search failed: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json()
+    // If basic search didn't work, try the old multi-market approach
+    console.log('🌍 Basic search had no previews, trying multiple markets...');
+    const markets = ['US', 'GB', 'DE', 'SE', 'AU', 'CA']; // Try markets known for having previews
+    let bestResults = [];
+    
+    for (const market of markets) {
+      const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=20&market=${market}`;
+      console.log(`Trying market ${market}...`);
+      
+      const response = await fetch(searchUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        console.log(`Market ${market} failed:`, response.status);
+        continue;
+      }
+
+      const data = await response.json();
+      
+      if (data.tracks.items.length > 0) {
+        const tracksWithPreviews = data.tracks.items.filter(track => track.preview_url);
+        console.log(`Market ${market}: ${data.tracks.items.length} tracks, ${tracksWithPreviews.length} with previews`);
+        
+        if (tracksWithPreviews.length > 0) {
+          console.log(`✅ Found previews in market: ${market}`);
+          bestResults = data.tracks.items;
+          break;
+        }
+        
+        if (bestResults.length === 0) {
+          bestResults = data.tracks.items;
+        }
+      }
+    }
+
+    if (bestResults.length === 0) {
+      console.log('❌ No results found in any market');
+      return [];
+    }
+
+    const data = { tracks: { items: bestResults } };
     
     // Debug: Log the full API response for first track
     if (data.tracks.items.length > 0) {
@@ -137,44 +237,57 @@ export async function searchSpotifyTrack(query) {
     
     // If no tracks have previews, try a different search approach
     if (previewCount === 0 && tracks.length > 0) {
-      console.log('No previews found, trying alternative search...');
+      console.log('No previews found, trying alternative search strategies...');
       
-      // Try searching for more popular/recent versions
-      const alternativeQuery = query + ' official';
-      const altResponse = await fetch(
-        `https://api.spotify.com/v1/search?q=${encodeURIComponent(alternativeQuery)}&type=track&limit=15&market=US`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
+      // Strategy 1: Search for radio edit, single version, etc.
+      const alternativeQueries = [
+        query + ' radio edit',
+        query + ' single version',
+        query + ' remaster',
+        query.split(' ').slice(0, 2).join(' ') // Just first two words
+      ];
+      
+      for (const altQuery of alternativeQueries) {
+        console.log(`Trying alternative query: "${altQuery}"`);
+        
+        const altResponse = await fetch(
+          `https://api.spotify.com/v1/search?q=${encodeURIComponent(altQuery)}&type=track&limit=15&market=US`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+        
+        if (altResponse.ok) {
+          const altData = await altResponse.json();
+          const altTracks = altData.tracks.items.map(track => ({
+            id: track.id,
+            name: track.name,
+            artist: track.artists[0]?.name || '',
+            duration: Math.round(track.duration_ms / 1000),
+            album: track.album?.name || '',
+            image: track.album?.images[0]?.url || '',
+            preview_url: track.preview_url || null
+          }));
+          
+          const altPreviewCount = altTracks.filter(t => t.preview_url).length;
+          console.log(`Alternative search "${altQuery}": ${altTracks.length} tracks, ${altPreviewCount} with previews`);
+          
+          if (altPreviewCount > 0) {
+            // Combine results, prioritizing tracks with previews
+            const tracksWithPreviews = altTracks.filter(t => t.preview_url);
+            const originalTracksWithoutDuplicates = tracks.filter(t => 
+              !altTracks.some(alt => alt.id === t.id)
+            );
+            
+            console.log('✅ Found previews with alternative search!');
+            return [...tracksWithPreviews, ...originalTracksWithoutDuplicates].slice(0, 5);
           }
         }
-      );
-      
-      if (altResponse.ok) {
-        const altData = await altResponse.json();
-        const altTracks = altData.tracks.items.map(track => ({
-          id: track.id,
-          name: track.name,
-          artist: track.artists[0]?.name || '',
-          duration: Math.round(track.duration_ms / 1000),
-          album: track.album?.name || '',
-          image: track.album?.images[0]?.url || '',
-          preview_url: track.preview_url || null
-        }));
-        
-        const altPreviewCount = altTracks.filter(t => t.preview_url).length;
-        console.log(`Alternative search: ${altTracks.length} tracks, ${altPreviewCount} with previews`);
-        
-        if (altPreviewCount > 0) {
-          // Combine results, prioritizing tracks with previews
-          const tracksWithPreviews = altTracks.filter(t => t.preview_url);
-          const originalTracksWithoutDuplicates = tracks.filter(t => 
-            !altTracks.some(alt => alt.id === t.id)
-          );
-          
-          return [...tracksWithPreviews, ...originalTracksWithoutDuplicates].slice(0, 5);
-        }
       }
+      
+      console.log('❌ No previews found with any search strategy');
     }
     
     return tracks.slice(0, 5);

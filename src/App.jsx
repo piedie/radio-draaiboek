@@ -31,14 +31,13 @@ const RadioRundownPro = () => {
   
   // State voor klok weergave
   const [showClock, setShowClock] = useState(true);
-  const [clockWindow, setClockWindow] = useState(null);
+  const [showClockWindow, setShowClockWindow] = useState(false);
   
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [showJingleEditor, setShowJingleEditor] = useState(false);
   const [jingles, setJingles] = useState([]);
   const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
 
   const t = theme === 'light' ? {
     bg: 'bg-gray-50', card: 'bg-white', text: 'text-gray-900', textSecondary: 'text-gray-600',
@@ -119,24 +118,8 @@ const RadioRundownPro = () => {
   };
 
   useEffect(() => {
-    if (currentRundownId) {
-      console.log('🔄 CurrentRundownId changed to:', currentRundownId);
-      loadRunbookItems(currentRundownId);
-    }
+    if (currentRundownId) loadRunbookItems(currentRundownId);
   }, [currentRundownId]);
-
-  // Sync data to clock window
-  useEffect(() => {
-    if (clockWindow && !clockWindow.closed) {
-      const clockData = {
-        items,
-        currentTime,
-        isPlaying,
-        totalDuration: items.reduce((sum, item) => sum + item.duration, 0)
-      };
-      clockWindow.postMessage({ type: 'CLOCK_UPDATE', data: clockData }, '*');
-    }
-  }, [clockWindow, items, currentTime, isPlaying]);
 
   // Authentication handlers
   const handleLogin = async () => {
@@ -196,52 +179,13 @@ const RadioRundownPro = () => {
   const addItem = async (item) => {
     if (!currentRundownId) return;
     const position = items.length;
-    console.log('➕ Adding item:', item);
-    console.log('📌 To runbook:', currentRundownId);
-    
-    // Check for potential data size issues
-    if (item.audio_files && item.audio_files.length > 0) {
-      const totalSize = JSON.stringify(item.audio_files).length;
-      console.log('📊 Audio files data size:', totalSize, 'characters');
-      if (totalSize > 100000) { // 100KB
-        console.warn('⚠️ Large audio data detected, this might cause database issues');
-      }
-    }
-    
-    const { data, error } = await supabase.from('items').insert([{ runbook_id: currentRundownId, ...item, position }]).select();
-    
-    if (error) {
-      console.error('❌ Error adding item:', error);
-      alert('Fout bij opslaan: ' + error.message);
-      return;
-    }
-    
-    console.log('✅ Item added to database:', data[0]);
+    const { data } = await supabase.from('items').insert([{ runbook_id: currentRundownId, ...item, position }]).select();
     if (data) setItems([...items, data[0]]);
     setShowAddForm(false);
   };
 
   const updateItem = async (id, updated) => {
-    console.log('🔄 Updating item:', id, 'with:', updated);
-    
-    // Check for potential data size issues
-    if (updated.audio_files && updated.audio_files.length > 0) {
-      const totalSize = JSON.stringify(updated.audio_files).length;
-      console.log('📊 Audio files data size:', totalSize, 'characters');
-      if (totalSize > 100000) { // 100KB
-        console.warn('⚠️ Large audio data detected, this might cause database issues');
-      }
-    }
-    
-    const { data, error } = await supabase.from('items').update(updated).eq('id', id).select();
-    
-    if (error) {
-      console.error('❌ Error updating item:', error);
-      alert('Fout bij bijwerken: ' + error.message);
-      return;
-    }
-    
-    console.log('✅ Item updated in database:', data[0]);
+    await supabase.from('items').update(updated).eq('id', id);
     setItems(items.map(item => item.id === id ? { ...item, ...updated } : item));
     setEditingItem(null);
   };
@@ -325,76 +269,6 @@ const RadioRundownPro = () => {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [isPlaying, totalDuration]);
 
-  // Keyboard shortcuts for game audio files
-  useEffect(() => {
-    const handleKeyPress = (event) => {
-      // Only handle shortcuts when no input field is focused and no modals are open
-      if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || showAddForm || editingItem || showPrintModal || showLogin) {
-        return;
-      }
-
-      // Check for number keys 1-4 to play game audio files
-      const keyNumber = parseInt(event.key);
-      if (keyNumber >= 1 && keyNumber <= 4) {
-        event.preventDefault();
-        playGameAudioByShortcut(keyNumber);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyPress);
-    return () => {
-      document.removeEventListener('keydown', handleKeyPress);
-    };
-  }, [items, expandedItems]);
-
-  // Function to play game audio by shortcut
-  const playGameAudioByShortcut = (keyNumber) => {
-    // Find the first expanded game item or the first game item if none expanded
-    let targetGameItem = null;
-    
-    // First try to find an expanded game item
-    for (const item of items) {
-      if (item.type === 'game' && expandedItems.has(item.id) && item.audio_files && item.audio_files.length > 0) {
-        targetGameItem = item;
-        break;
-      }
-    }
-    
-    // If no expanded game item, find first game item with audio files
-    if (!targetGameItem) {
-      for (const item of items) {
-        if (item.type === 'game' && item.audio_files && item.audio_files.length > 0) {
-          targetGameItem = item;
-          break;
-        }
-      }
-    }
-    
-    if (targetGameItem && targetGameItem.audio_files && targetGameItem.audio_files[keyNumber - 1]) {
-      const audioFile = targetGameItem.audio_files[keyNumber - 1];
-      
-      // Create a temporary audio element to play the file
-      const audio = new Audio(audioFile.data);
-      audio.volume = 0.7;
-      
-      // Stop any currently playing audio first
-      document.querySelectorAll('audio').forEach(audioEl => {
-        if (!audioEl.paused) {
-          audioEl.pause();
-          audioEl.currentTime = 0;
-        }
-      });
-      
-      audio.play().catch(error => {
-        console.error('Error playing game audio via shortcut:', error);
-      });
-      
-      console.log(`Playing ${audioFile.name} via shortcut ${keyNumber}`);
-    } else {
-      console.log(`No game audio file found for shortcut ${keyNumber}`);
-    }
-  };
-
   // Print functionality
   const printRundown = () => {
     let content = 'RADIO DRAAIBOEK\n================\n\n';
@@ -431,55 +305,10 @@ const RadioRundownPro = () => {
     setShowPrintModal(false);
   };
 
-  // Open klok in nieuw venster
-  const openClockInNewWindow = () => {
-    const newWindow = window.open('/clock.html', 'clockWindow', 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no');
-    setClockWindow(newWindow);
+  // Popup klok window
+  const openClockWindow = () => {
+    setShowClockWindow(true);
   };
-
-  // Toggle alle items in/uit
-  const toggleAllItems = () => {
-    const allExpanded = expandedItems.size === items.length && items.length > 0;
-    setExpandedItems(allExpanded ? new Set() : new Set(items.map(i => i.id)));
-  };
-
-  // Debug functie om database inhoud te checken
-  const debugDatabaseContent = async () => {
-    if (!currentRundownId) return;
-    console.log('🔍 Debug: Checking database content for runbook:', currentRundownId);
-    
-    const { data, error } = await supabase.from('items').select('*').eq('runbook_id', currentRundownId);
-    
-    if (error) {
-      console.error('❌ Error fetching debug data:', error);
-      return;
-    }
-    
-    console.log('📊 Database contains', data?.length || 0, 'items');
-    data?.forEach((item, index) => {
-      const emptyFields = [];
-      if (!item.title) emptyFields.push('title');
-      if (!item.artist && item.type === 'music') emptyFields.push('artist');
-      if (!item.notes && ['talk', 'reportage'].includes(item.type)) emptyFields.push('notes');
-      if (!item.first_words && ['talk', 'reportage', 'live'].includes(item.type)) emptyFields.push('first_words');
-      if (!item.last_words && ['talk', 'reportage', 'live'].includes(item.type)) emptyFields.push('last_words');
-      if (!item.audio_files && item.type === 'game') emptyFields.push('audio_files');
-      
-      console.log(`📋 Item ${index + 1}:`, {
-        id: item.id,
-        title: item.title || '❌ LEEG',
-        type: item.type,
-        emptyFields: emptyFields.length > 0 ? emptyFields : 'Geen',
-        audio_files_count: item.audio_files?.length || 0,
-        audio_files_size: item.audio_files ? JSON.stringify(item.audio_files).length : 0
-      });
-    });
-  };
-
-  // Maak debug functie beschikbaar in console
-  useEffect(() => {
-    window.debugDB = debugDatabaseContent;
-  }, [currentRundownId]);
 
   // Login screen
   if (showLogin) {
@@ -600,15 +429,15 @@ const RadioRundownPro = () => {
             </button>
             <button 
               onClick={() => setShowClock(!showClock)} 
-              className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
+              className={`${t.button} px-4 py-2 rounded-lg flex items-center gap-2 text-sm`}
             >
-              � Klok
+              🕐 {showClock ? 'Verberg Klok' : 'Toon Klok'}
             </button>
             <button 
-              onClick={openClockInNewWindow} 
+              onClick={openClockWindow} 
               className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
             >
-              🪟 Klokvenster
+              📺 Popup Klok
             </button>
             <button 
               onClick={() => setShowPrintModal(true)} 
@@ -617,16 +446,16 @@ const RadioRundownPro = () => {
               🖨️ Print
             </button>
             <button 
-              onClick={toggleAllItems} 
+              onClick={() => setExpandedItems(new Set(items.map(i => i.id)))} 
               className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
             >
-              {expandedItems.size === items.length && items.length > 0 ? '⬆️ Alles in' : '⬇️ Alles uit'}
+              ⬇️ Alles uit
             </button>
             <button 
-              onClick={() => setShowSettings(true)} 
+              onClick={() => setExpandedItems(new Set())} 
               className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
             >
-              ⚙️ Instellingen
+              ⬆️ Alles in
             </button>
           </div>
           
@@ -715,27 +544,7 @@ const RadioRundownPro = () => {
         <div className={`grid gap-6 ${showClock ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
           {/* Rundown list - krijgt volledige breedte als klok verborgen is */}
           <div className={`${t.card} rounded-lg p-6 shadow border ${t.border} ${!showClock ? 'lg:col-span-1' : ''}`}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className={`text-xl font-semibold ${t.text}`}>Rundown</h2>
-              {items.some(item => item.type === 'game' && item.audio_files && item.audio_files.length > 0) && (
-                <div className="text-xs bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-3 py-1 rounded-full">
-                  💡 Tip: Gebruik toetsen 1-4 om geluidseffectjes af te spelen
-                </div>
-              )}
-              {/* Debug info */}
-              <div className="text-xs">
-                <button 
-                  onClick={() => window.debugDB && window.debugDB()}
-                  className={`${t.buttonSecondary} px-2 py-1 rounded text-xs mr-2`}
-                  title="Bekijk database inhoud in console (F12)"
-                >
-                  🔍 Debug DB
-                </button>
-                <span className={`${t.textSecondary}`}>
-                  Items: {items.length}
-                </span>
-              </div>
-            </div>
+            <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>Rundown</h2>
             <RundownList 
               items={items}
               expandedItems={expandedItems}
@@ -769,6 +578,32 @@ const RadioRundownPro = () => {
             </div>
           )}
         </div>
+
+        {/* Popup klok window */}
+        {showClockWindow && (
+          <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+            <div className={`${t.card} rounded-lg p-8 shadow-2xl max-w-2xl w-full`}>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className={`text-2xl font-bold ${t.text}`}>🕐 Uitzending Klok</h2>
+                <button 
+                  onClick={() => setShowClockWindow(false)} 
+                  className={`${t.buttonSecondary} px-4 py-2 rounded-lg`}
+                >
+                  Sluiten
+                </button>
+              </div>
+              <Clock 
+                items={items}
+                currentTime={currentTime}
+                isPlaying={isPlaying}
+                setIsPlaying={setIsPlaying}
+                theme={theme}
+                formatTime={formatTime}
+                formatTimeShort={formatTimeShort}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Jingle editor modal */}
         {showJingleEditor && (
@@ -843,35 +678,6 @@ const RadioRundownPro = () => {
                     Annuleren
                   </button>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Instellingen modal */}
-        {showSettings && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className={`${t.card} p-6 rounded-lg w-96 shadow-2xl`}>
-              <h3 className={`text-lg font-bold mb-4 ${t.text}`}>⚙️ Instellingen</h3>
-              <div className="space-y-4">
-                <div className={`text-sm ${t.textSecondary}`}>
-                  Deze pagina wordt later uitgebreid met verschillende instellingen zoals:
-                </div>
-                <div className={`text-sm ${t.text} space-y-2`}>
-                  <div>• 📻 Station instellingen</div>
-                  <div>• 🎵 Spotify configuratie</div>
-                  <div>• 🕐 Klok voorkeuren</div>
-                  <div>• 🎨 Interface aanpassingen</div>
-                  <div>• 📱 Export instellingen</div>
-                </div>
-              </div>
-              <div className="flex gap-2 mt-6">
-                <button 
-                  onClick={() => setShowSettings(false)} 
-                  className={`${t.buttonSecondary} px-4 py-2 rounded flex-1`}
-                >
-                  Sluiten
-                </button>
               </div>
             </div>
           </div>

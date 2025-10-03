@@ -81,7 +81,8 @@ const ItemForm = ({
       ...form, 
       title: result.name, 
       artist: result.artist, 
-      duration: result.duration 
+      duration: result.duration,
+      spotify_preview_url: result.preview_url 
     });
     setShowLocal(false);
     setLocalResults([]);

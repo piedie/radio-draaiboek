@@ -56,7 +56,8 @@ export async function searchSpotifyTrack(query) {
       artist: track.artists[0]?.name || '',
       duration: Math.round(track.duration_ms / 1000),
       album: track.album?.name || '',
-      image: track.album?.images[0]?.url || ''
+      image: track.album?.images[0]?.url || '',
+      preview_url: track.preview_url || null
     }))
   } catch (error) {
     console.error('Spotify search error:', error)

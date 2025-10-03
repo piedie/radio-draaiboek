@@ -1,5 +1,5 @@
-import React from 'react';
-import { Edit2, Trash2, GripVertical, Music, Mic, Volume2 } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Edit2, Trash2, GripVertical, Music, Mic, Volume2, Play, Pause } from 'lucide-react';
 
 const RundownItem = ({ 
   item, 
@@ -17,6 +17,8 @@ const RundownItem = ({
   onDragOver,
   onDrop
 }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef(null);
   const t = theme === 'light' ? {
     card: 'bg-white',
     text: 'text-gray-900',
@@ -41,6 +43,25 @@ const RundownItem = ({
     return icons[type] || <Music size={16} />;
   };
 
+  const handlePlayPreview = (e) => {
+    e.stopPropagation();
+    if (!item.spotify_preview_url) return;
+
+    if (isPlaying) {
+      audioRef.current?.pause();
+      setIsPlaying(false);
+    } else {
+      if (audioRef.current) {
+        audioRef.current.play();
+        setIsPlaying(true);
+      }
+    }
+  };
+
+  const handleAudioEnded = () => {
+    setIsPlaying(false);
+  };
+
   return (
     <div 
       draggable 
@@ -49,6 +70,15 @@ const RundownItem = ({
       onDrop={(e) => onDrop(e, index)} 
       className={`rounded-lg p-4 border cursor-move ${t.card} ${t.border} ${isDragOver ? 'border-t-4 border-t-blue-500' : ''}`}
     >
+      {/* Hidden audio element for Spotify preview */}
+      {item.spotify_preview_url && (
+        <audio 
+          ref={audioRef}
+          src={item.spotify_preview_url}
+          onEnded={handleAudioEnded}
+          preload="none"
+        />
+      )}
       <div className="flex justify-between">
         <div className="flex gap-3 flex-1">
           <GripVertical size={16} className={t.textSecondary} />
@@ -100,6 +130,18 @@ const RundownItem = ({
               tot {formatTime(getCumulativeTime(index))}
             </div>
           </div>
+          
+          {/* Spotify preview button */}
+          {item.type === 'music' && item.spotify_preview_url && (
+            <button 
+              onClick={handlePlayPreview}
+              className={`p-2 rounded-full ${isPlaying ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} hover:bg-green-400 transition-colors`}
+              title="Speel 30 seconden preview"
+            >
+              {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+            </button>
+          )}
+          
           <button 
             onClick={() => onEdit(item)} 
             className={t.textSecondary}

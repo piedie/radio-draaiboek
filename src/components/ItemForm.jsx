@@ -100,7 +100,32 @@ const ItemForm = ({
     }
   };
 
-  const playPreview = (previewUrl) => {
+  const testPreviewUrl = async (previewUrl) => {
+    try {
+      console.log('Testing preview URL accessibility:', previewUrl);
+      
+      // Test if URL is reachable with a HEAD request
+      const response = await fetch(previewUrl, { 
+        method: 'HEAD',
+        mode: 'no-cors' // This might help with CORS issues
+      });
+      
+      console.log('URL test response:', {
+        ok: response.ok,
+        status: response.status,
+        type: response.type
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('URL test failed:', error);
+      return false;
+    }
+  };
+
+  const playPreviewSimple = (previewUrl) => {
+    console.log('Trying simple preview method:', previewUrl);
+    
     if (!previewUrl) {
       alert('Geen preview beschikbaar voor dit nummer');
       return;
@@ -112,17 +137,19 @@ const ItemForm = ({
       previewAudio.currentTime = 0;
     }
 
-    // Create new audio element
+    // Simple method without CORS headers
     const audio = new Audio(previewUrl);
-    audio.volume = 0.5; // 50% volume
+    audio.volume = 0.5;
     
-    audio.addEventListener('loadeddata', () => {
+    audio.addEventListener('canplay', () => {
+      console.log('Simple method: Audio can play');
       audio.play().then(() => {
+        console.log('Simple method: Playing successfully');
         setIsPlaying(true);
         setPreviewAudio(audio);
       }).catch(error => {
-        console.error('Preview afspelen mislukt:', error);
-        alert('Preview kan niet worden afgespeeld. Mogelijk geblokkeerd door browser of geen preview beschikbaar.');
+        console.error('Simple method play failed:', error);
+        alert('Browser blokkeert automatisch afspelen. Probeer eerst op de pagina te klikken.');
       });
     });
 
@@ -132,11 +159,18 @@ const ItemForm = ({
     });
 
     audio.addEventListener('error', (e) => {
-      console.error('Audio error:', e);
-      alert('Preview kan niet worden geladen. Controleer je internetverbinding.');
+      console.error('Simple method error:', e);
+      alert('Preview niet beschikbaar. Dit nummer heeft mogelijk geen preview op Spotify.');
       setIsPlaying(false);
       setPreviewAudio(null);
     });
+
+    audio.load();
+  };
+
+  const playPreview = async (previewUrl) => {
+    // Try simple method first
+    playPreviewSimple(previewUrl);
   };
 
   const stopPreview = () => {
@@ -157,6 +191,28 @@ const ItemForm = ({
       }
     };
   }, [previewAudio]);
+
+  // Test browser audio capabilities
+  const testAudioCapabilities = () => {
+    const audio = new Audio();
+    const testUrl = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0g';
+    
+    console.log('Testing browser audio capabilities:');
+    console.log('- Audio constructor available:', !!window.Audio);
+    console.log('- AudioContext available:', !!(window.AudioContext || window.webkitAudioContext));
+    console.log('- Can play MP3:', audio.canPlayType('audio/mpeg'));
+    console.log('- Can play OGG:', audio.canPlayType('audio/ogg'));
+    console.log('- Can play WAV:', audio.canPlayType('audio/wav'));
+    console.log('- User agent:', navigator.userAgent);
+    
+    // Test autoplay permissions
+    audio.play().then(() => {
+      audio.pause();
+      console.log('- Autoplay: ALLOWED');
+    }).catch(error => {
+      console.log('- Autoplay: BLOCKED -', error.name);
+    });
+  };
 
   const handleSubmit = () => {
     if (form.title) {
@@ -304,6 +360,38 @@ const ItemForm = ({
                 <div className={`text-xs mt-1 ${t.textSecondary}`}>
                   💡 Tip: Type een deel van de titel (bijv. "hotel") en kies uit de resultaten
                 </div>
+                
+                {/* Debug info for development */}
+                {localResults.length > 0 && (
+                  <div className={`text-xs mt-2 p-2 rounded ${t.border} border bg-gray-50 dark:bg-gray-800`}>
+                    <details>
+                      <summary className={`cursor-pointer ${t.textSecondary}`}>🔧 Debug Info (klik om uit te klappen)</summary>
+                      <div className="mt-2 space-y-1">
+                        {localResults.map((result, idx) => (
+                          <div key={idx} className={`text-xs ${t.textSecondary}`}>
+                            <strong>{result.name}</strong>: 
+                            {result.preview_url ? 
+                              <span className="text-green-600"> ✓ Preview URL beschikbaar</span> : 
+                              <span className="text-yellow-600"> ⚠ Geen preview URL</span>
+                            }
+                            {result.preview_url && (
+                              <div className="ml-2 font-mono text-xs break-all">
+                                {result.preview_url}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                    <button
+                      type="button"
+                      onClick={testAudioCapabilities}
+                      className={`mt-2 px-2 py-1 rounded text-xs ${t.buttonSecondary}`}
+                    >
+                      🔧 Test Audio Mogelijkheden
+                    </button>
+                  </div>
+                )}
               </div>
             </>
           )}

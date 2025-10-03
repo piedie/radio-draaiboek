@@ -118,7 +118,10 @@ const RadioRundownPro = () => {
   };
 
   useEffect(() => {
-    if (currentRundownId) loadRunbookItems(currentRundownId);
+    if (currentRundownId) {
+      console.log('🔄 CurrentRundownId changed to:', currentRundownId);
+      loadRunbookItems(currentRundownId);
+    }
   }, [currentRundownId]);
 
   // Authentication handlers
@@ -179,13 +182,34 @@ const RadioRundownPro = () => {
   const addItem = async (item) => {
     if (!currentRundownId) return;
     const position = items.length;
-    const { data } = await supabase.from('items').insert([{ runbook_id: currentRundownId, ...item, position }]).select();
+    console.log('➕ Adding item:', item);
+    console.log('📌 To runbook:', currentRundownId);
+    
+    const { data, error } = await supabase.from('items').insert([{ runbook_id: currentRundownId, ...item, position }]).select();
+    
+    if (error) {
+      console.error('❌ Error adding item:', error);
+      alert('Fout bij opslaan: ' + error.message);
+      return;
+    }
+    
+    console.log('✅ Item added to database:', data[0]);
     if (data) setItems([...items, data[0]]);
     setShowAddForm(false);
   };
 
   const updateItem = async (id, updated) => {
-    await supabase.from('items').update(updated).eq('id', id);
+    console.log('🔄 Updating item:', id, 'with:', updated);
+    
+    const { data, error } = await supabase.from('items').update(updated).eq('id', id).select();
+    
+    if (error) {
+      console.error('❌ Error updating item:', error);
+      alert('Fout bij bijwerken: ' + error.message);
+      return;
+    }
+    
+    console.log('✅ Item updated in database:', data[0]);
     setItems(items.map(item => item.id === id ? { ...item, ...updated } : item));
     setEditingItem(null);
   };
@@ -309,6 +333,43 @@ const RadioRundownPro = () => {
   const openClockWindow = () => {
     setShowClockWindow(true);
   };
+
+  // Debug functie om database inhoud te checken
+  const debugDatabaseContent = async () => {
+    if (!currentRundownId) return;
+    console.log('🔍 Debug: Checking database content for runbook:', currentRundownId);
+    
+    const { data, error } = await supabase.from('items').select('*').eq('runbook_id', currentRundownId);
+    
+    if (error) {
+      console.error('❌ Error fetching debug data:', error);
+      return;
+    }
+    
+    console.log('📊 Database contains', data?.length || 0, 'items');
+    data?.forEach((item, index) => {
+      const emptyFields = [];
+      if (!item.title) emptyFields.push('title');
+      if (!item.artist && item.type === 'music') emptyFields.push('artist');
+      if (!item.notes && ['talk', 'reportage'].includes(item.type)) emptyFields.push('notes');
+      if (!item.first_words && ['talk', 'reportage', 'live'].includes(item.type)) emptyFields.push('first_words');
+      if (!item.last_words && ['talk', 'reportage', 'live'].includes(item.type)) emptyFields.push('last_words');
+      if (!item.audio_files && item.type === 'game') emptyFields.push('audio_files');
+      
+      console.log(`📋 Item ${index + 1}:`, {
+        id: item.id,
+        title: item.title || '❌ LEEG',
+        type: item.type,
+        emptyFields: emptyFields.length > 0 ? emptyFields : 'Geen',
+        position: item.position
+      });
+    });
+  };
+
+  // Maak debug functie beschikbaar in console
+  useEffect(() => {
+    window.debugDB = debugDatabaseContent;
+  }, [currentRundownId]);
 
   // Login screen
   if (showLogin) {
@@ -544,7 +605,21 @@ const RadioRundownPro = () => {
         <div className={`grid gap-6 ${showClock ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
           {/* Rundown list - krijgt volledige breedte als klok verborgen is */}
           <div className={`${t.card} rounded-lg p-6 shadow border ${t.border} ${!showClock ? 'lg:col-span-1' : ''}`}>
-            <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>Rundown</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className={`text-xl font-semibold ${t.text}`}>Rundown</h2>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => window.debugDB && window.debugDB()}
+                  className={`${t.buttonSecondary} px-3 py-1 rounded text-xs`}
+                  title="Bekijk database inhoud in console (F12)"
+                >
+                  🔍 Debug DB
+                </button>
+                <span className={`text-xs ${t.textSecondary}`}>
+                  Items: {items.length}
+                </span>
+              </div>
+            </div>
             <RundownList 
               items={items}
               expandedItems={expandedItems}

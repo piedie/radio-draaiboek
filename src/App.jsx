@@ -9,7 +9,7 @@ import RundownList from './components/RundownList';
 import { loadUserItemTypes, getItemTypeByName } from './utils/itemTypeManager';
 
 // Versie informatie
-const APP_VERSION = '2.2';
+const APP_VERSION = '2.3';
 const BUILD_DATE = '2025-10-04';
 const COPYRIGHT_YEAR = new Date().getFullYear();
 
@@ -61,6 +61,11 @@ const RadioRundownPro = () => {
     button: 'bg-blue-600 hover:bg-blue-700 text-white',
     buttonSecondary: 'bg-gray-700 hover:bg-gray-600 text-white'
   };
+
+  // Debug effect voor userItemTypes
+  useEffect(() => {
+    console.log('🔄 userItemTypes state updated:', userItemTypes);
+  }, [userItemTypes]);
 
   // Authentication en data loading
   useEffect(() => {
@@ -784,8 +789,3 @@ const RadioRundownPro = () => {
 };
 
 export default RadioRundownPro;
-
-// Debug effect voor userItemTypes
-useEffect(() => {
-  console.log('🔄 userItemTypes state updated:', userItemTypes);
-}, [userItemTypes]);

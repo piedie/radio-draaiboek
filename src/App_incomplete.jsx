@@ -32,7 +32,6 @@ const RadioRundownPro = () => {
   // State voor klok weergave
   const [showClock, setShowClock] = useState(true);
   const [showClockWindow, setShowClockWindow] = useState(false);
-  const [clockWindow, setClockWindow] = useState(null);
   
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -95,19 +94,6 @@ const RadioRundownPro = () => {
   useEffect(() => {
     if (currentRundownId) loadRunbookItems(currentRundownId);
   }, [currentRundownId]);
-
-  // Sync data to clock window
-  useEffect(() => {
-    if (clockWindow && !clockWindow.closed) {
-      const clockData = {
-        items,
-        currentTime,
-        isPlaying,
-        totalDuration: items.reduce((sum, item) => sum + item.duration, 0)
-      };
-      clockWindow.postMessage(clockData, '*');
-    }
-  }, [clockWindow, items, currentTime, isPlaying]);
 
   // Authentication handlers
   const handleLogin = async () => {
@@ -298,12 +284,6 @@ const RadioRundownPro = () => {
     setShowClockWindow(true);
   };
 
-  // Open klok in nieuw venster
-  const openClockInNewWindow = () => {
-    const newWindow = window.open('/clock.html', 'clockWindow', 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no');
-    setClockWindow(newWindow);
-  };
-
   // Login screen
   if (showLogin) {
     return (
@@ -432,12 +412,6 @@ const RadioRundownPro = () => {
               className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
             >
               📺 Popup Klok
-            </button>
-            <button 
-              onClick={openClockInNewWindow} 
-              className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
-            >
-              🪟 Nieuw Venster
             </button>
             <button 
               onClick={() => setShowPrintModal(true)} 

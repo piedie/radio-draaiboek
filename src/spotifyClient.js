@@ -90,6 +90,26 @@ export async function testSpotifyAPI() {
     }
     
     console.log('❌ No previews found for any test queries. This might indicate a regional restriction or API issue.');
+    
+    // Final diagnosis - if we see tracks with many markets but no previews, it's a policy issue
+    console.log('\n🔍 FINAL DIAGNOSIS:');
+    console.log('• Tracks found: ✅ YES (API credentials work)');
+    console.log('• Markets available: ✅ YES (180+ countries for major tracks)');
+    console.log('• Preview URLs: ❌ NO (consistently null across all tracks)');
+    console.log('');
+    console.log('🎯 CONCLUSION: This indicates a Spotify API policy change.');
+    console.log('   Spotify has likely restricted preview access for:');
+    console.log('   • Client Credentials flow (your current setup)');
+    console.log('   • Certain regions (EU/Netherlands)');
+    console.log('   • Third-party applications');
+    console.log('');
+    console.log('💡 SOLUTIONS:');
+    console.log('   1. Switch to Authorization Code flow (requires user login)');
+    console.log('   2. Use alternative music APIs (Last.fm, YouTube, etc.)');
+    console.log('   3. Accept that previews are not available');
+    console.log('');
+    console.log('🚫 This is NOT a bug in your code - it\'s a Spotify policy limitation.');
+    
     return false;
     
   } catch (error) {

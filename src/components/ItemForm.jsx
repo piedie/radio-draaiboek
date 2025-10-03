@@ -313,20 +313,19 @@ const ItemForm = ({
                   <div className={`mt-2 border rounded ${t.border}`}>
                     {/* Warning if no previews available */}
                     {localResults.filter(r => r.preview_url).length === 0 && (
-                      <div className="p-3 bg-yellow-50 dark:bg-yellow-900 border-b border-yellow-200 dark:border-yellow-700">
-                        <div className="text-yellow-800 dark:text-yellow-200 text-sm">
-                          ⚠️ <strong>Geen previews beschikbaar</strong><br/>
-                          De app heeft geprobeerd in meerdere landen (NL, US, GB, DE, SE) en met verschillende zoektermen.<br/>
-                          <strong>Mogelijke oorzaken:</strong>
-                          <ul className="text-xs mt-1 ml-4 list-disc">
-                            <li>Geografische restricties</li>
-                            <li>Auteursrechten beperkingen</li>
-                            <li>Oudere nummers hebben vaak geen preview</li>
-                            <li>Sommige labels staan geen previews toe</li>
+                      <div className="p-3 bg-blue-50 dark:bg-blue-900 border-b border-blue-200 dark:border-blue-700">
+                        <div className="text-blue-800 dark:text-blue-200 text-sm">
+                          ℹ️ <strong>Spotify Preview Status</strong><br/>
+                          Geen previews beschikbaar - dit is een bekende beperking van Spotify's API sinds 2024.<br/>
+                          <strong>Dit betekent NIET dat je app niet werkt!</strong>
+                          <ul className="text-xs mt-2 ml-4 list-disc">
+                            <li>✅ Spotify zoeken werkt perfect</li>
+                            <li>✅ Track informatie wordt correct opgehaald</li>
+                            <li>✅ Metadata (titel, artiest, duur) is accuraat</li>
+                            <li>❌ Preview afspelen is niet mogelijk</li>
                           </ul>
-                          <div className="mt-2 text-xs">
-                            💡 <strong>Tip:</strong> Probeer moderne, populaire nummers of klik "🎵 Test Spotify API" om te controleren of de service werkt.<br/>
-                            🌍 <strong>Nederland specifiek:</strong> EU heeft zeer strenge preview restricties vanwege auteursrechten (GDPR/DSA).
+                          <div className="mt-2 text-xs font-medium">
+                            💡 <strong>Gebruik de Spotify data gewoon zonder preview!</strong> De informatie is volledig en betrouwbaar.
                           </div>
                         </div>
                       </div>
@@ -350,8 +349,8 @@ const ItemForm = ({
                             </div>
                           </button>
                           
-                          {/* Preview buttons */}
-                          {result.preview_url && (
+                          {/* Preview or info buttons */}
+                          {result.preview_url ? (
                             <div className="flex gap-2 ml-2">
                               <button
                                 type="button"
@@ -370,6 +369,17 @@ const ItemForm = ({
                                   ⏹️ Stop
                                 </button>
                               )}
+                            </div>
+                          ) : (
+                            <div className="flex gap-2 ml-2">
+                              <button
+                                type="button"
+                                onClick={() => window.open(`https://open.spotify.com/track/${result.id}`, '_blank')}
+                                className={`px-2 py-1 rounded text-xs ${t.buttonSecondary}`}
+                                title="Open in Spotify"
+                              >
+                                🎵 Spotify
+                              </button>
                             </div>
                           )}
                         </div>

@@ -372,7 +372,7 @@ const RadioRundownPro = () => {
   // Test database items directly (debug functie)
   const testDatabaseItems = async () => {
     if (!currentRundownId) {
-      alert('Geen runbook geselecteerd');
+      console.log('❌ No runbook selected for database test');
       return;
     }
     
@@ -407,17 +407,16 @@ const RadioRundownPro = () => {
         });
       }
       
-      alert(`Database test: ${data?.length || 0} items gevonden`);
+      console.log(`✅ Database test completed: ${data?.length || 0} items found`);
     } catch (error) {
       console.error('❌ Database items test error:', error);
-      alert('Database test failed: ' + error.message);
     }
   };
 
   // Test copy functionality
   const testCopyFunction = async () => {
     if (!currentRundownId) {
-      alert('Geen runbook geselecteerd');
+      console.log('❌ No runbook selected for copy test');
       return;
     }
     

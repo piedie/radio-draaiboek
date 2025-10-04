@@ -369,6 +369,51 @@ const RadioRundownPro = () => {
     }
   };
 
+  // Test database items directly (debug functie)
+  const testDatabaseItems = async () => {
+    if (!currentRundownId) {
+      alert('Geen runbook geselecteerd');
+      return;
+    }
+    
+    try {
+      console.log('🔍 Testing database items for runbook:', currentRundownId);
+      const { data, error } = await supabase
+        .from('items')
+        .select('*')
+        .eq('runbook_id', currentRundownId)
+        .order('position');
+      
+      if (error) {
+        console.error('❌ Database items test failed:', error);
+        return;
+      }
+      
+      console.log('📊 Database query result:', data);
+      console.log('📊 Number of items found:', data?.length || 0);
+      
+      if (data && data.length > 0) {
+        data.forEach((item, index) => {
+          console.log(`📊 Item ${index + 1}:`, {
+            id: item.id,
+            type: item.type || 'NO_TYPE',
+            title: item.title || 'NO_TITLE',
+            artist: item.artist || 'NO_ARTIST',
+            notes: item.notes || 'NO_NOTES',
+            first_words: item.first_words || 'NO_FIRST_WORDS',
+            runbook_id: item.runbook_id,
+            position: item.position
+          });
+        });
+      }
+      
+      alert(`Database test: ${data?.length || 0} items gevonden`);
+    } catch (error) {
+      console.error('❌ Database items test error:', error);
+      alert('Database test failed: ' + error.message);
+    }
+  };
+
   // Test copy functionality
   const testCopyFunction = async () => {
     if (!currentRundownId) {

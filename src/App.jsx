@@ -1403,36 +1403,6 @@ const RadioRundownPro = () => {
           </div>
         </div>
       )}
-
-      {/* Test database items directly (debug functie) */}
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className={`${t.card} rounded-lg w-full max-w-md shadow-2xl`}>
-          <div className={`p-6 border-b ${t.border}`}>
-            <h3 className={`text-lg font-bold ${t.text}`}>🔍 Test Database Items</h3>
-          </div>
-          <div className="p-6">
-            <div className="mb-4">
-              <button 
-                onClick={testDatabaseItems}
-                className={`${t.button} w-full px-4 py-2 rounded-lg`}
-              >
-                Test Items in Huidig Draaiboek
-              </button>
-            </div>
-            <div className="text-sm text-center">
-              Opmerking: Deze functie is bedoeld voor ontwikkeldoeleinden. Wees voorzichtig met het uitvoeren van tests op productiegegevens.
-            </div>
-          </div>
-          <div className={`p-6 border-t flex gap-3 ${t.border}`}>
-            <button 
-              onClick={() => setShowJingleEditor(false)} 
-              className={`${t.buttonSecondary} flex-1 px-4 py-2 rounded-lg`}
-            >
-              Sluiten
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

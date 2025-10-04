@@ -2,6 +2,36 @@
 
 Alle belangrijke wijzigingen worden hier gedocumenteerd.
 
+## [3.0.0] - 2025-10-04
+
+### ✨ Toegevoegd
+- **🔴 Live Atoomtijd Functionaliteit**
+  - Nieuwe "Live" knop in hoofdmenu met groene styling
+  - Realtime atoomtijd via WorldTimeAPI (Nederlandse tijd)
+  - Grote, duidelijke digitale klok-weergave (23:12:11 formaat)
+  - NTP offset berekening voor nauwkeurige tijdsynchronisatie
+  - Intelligente layout: boven klok of boven rundown (bij verborgen klok)
+  - Compacte hoogte (~80px) om layout niet te verstoren
+  - Monospace lettertype voor professionele uitstraling
+
+### 🔧 Verbeterd
+- **Klok Labels Zichtbaarheid**
+  - SVG grootte vergroot van 320x320px naar 380x380px
+  - Klok centrum aangepast voor betere label-positionering
+  - Tijd-labels (0, 15, 30, 45) nu altijd zichtbaar binnen viewport
+  - Label-afstand geoptimaliseerd voor betere leesbaarheid
+
+### 🎨 UI Verbeteringen
+- Datum format gewijzigd naar DD-MM-YYYY (Nederlandse standaard)
+- Hoofdletter consistentie doorgeheel de app:
+  - "Mijn draaiboeken" (was: "Mijn Draaiboeken")
+  - "Download alle" (was: "Download Alle")
+  - "Verberg klok" / "Toon klok" (was: hoofdletters)
+  - "Externe klok" (was: "Externe Klok")
+  - "Zoek met Spotify" (was: "Spotify Zoeken")
+
+---
+
 ## [2.9.0] - 2025-10-04
 
 ### ✨ Toegevoegd

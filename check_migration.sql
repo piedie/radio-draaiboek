@@ -1,4 +1,3 @@
--- Check migratie status - Voer deze queries een voor een uit in Supabase SQL Editor
 
 -- 1. Controleer of user_item_types tabel bestaat en data bevat
 SELECT COUNT(*) as total_item_types FROM user_item_types;

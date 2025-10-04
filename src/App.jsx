@@ -9,7 +9,7 @@ import RundownList from './components/RundownList';
 import { loadUserItemTypes, getItemTypeByName } from './utils/itemTypeManager';
 
 // Versie informatie
-const APP_VERSION = '2.9';
+const APP_VERSION = '3.0';
 const BUILD_DATE = '2025-10-04';
 const COPYRIGHT_YEAR = new Date().getFullYear();
 
@@ -54,6 +54,11 @@ const RadioRundownPro = () => {
   const [showJingleEditor, setShowJingleEditor] = useState(false);
   const [jingles, setJingles] = useState([]);
   const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
+
+  // State voor live tijd weergave
+  const [showLiveTime, setShowLiveTime] = useState(false);
+  const [liveTime, setLiveTime] = useState('');
+  const [ntpOffset, setNtpOffset] = useState(0);
 
   const t = theme === 'light' ? {
     bg: 'bg-gray-50', card: 'bg-white', text: 'text-gray-900', textSecondary: 'text-gray-600',
@@ -225,7 +230,7 @@ const RadioRundownPro = () => {
         setRundowns([newRunbook[0], ...rundowns]);
         setCurrentRundownId(newRunbook[0].id); // Switch to new runbook
         
-        // Laad items voor display (met kleine delay voor database consistency)
+        // Laad items voor display (met kleine delay voor database consistentie)
         setTimeout(() => {
           loadRunbookItems(newRunbook[0].id);
         }, 100);
@@ -713,6 +718,52 @@ const RadioRundownPro = () => {
     }
   };
 
+  // NTP tijd functionaliteit
+  const fetchNTPTime = async () => {
+    try {
+      // Gebruik WorldTimeAPI voor nauwkeurige tijd
+      const response = await fetch('https://worldtimeapi.org/api/timezone/Europe/Amsterdam');
+      const data = await response.json();
+      const serverTime = new Date(data.datetime);
+      const localTime = new Date();
+      const offset = serverTime.getTime() - localTime.getTime();
+      setNtpOffset(offset);
+      console.log('🕐 NTP offset calculated:', offset, 'ms');
+    } catch (error) {
+      console.error('Failed to fetch NTP time:', error);
+      // Fallback: gebruik lokale tijd
+      setNtpOffset(0);
+    }
+  };
+
+  const updateLiveTime = () => {
+    const now = new Date(Date.now() + ntpOffset);
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const seconds = now.getSeconds().toString().padStart(2, '0');
+    setLiveTime(`${hours}:${minutes}:${seconds}`);
+  };
+
+  // Live tijd effect
+  useEffect(() => {
+    let liveTimeInterval;
+    
+    if (showLiveTime) {
+      // Haal NTP tijd op bij het activeren
+      fetchNTPTime();
+      
+      // Update elke seconde
+      liveTimeInterval = setInterval(updateLiveTime, 1000);
+      updateLiveTime(); // Eerste update direct
+    }
+    
+    return () => {
+      if (liveTimeInterval) {
+        clearInterval(liveTimeInterval);
+      }
+    };
+  }, [showLiveTime, ntpOffset]);
+
   // Login screen
   if (showLogin) {
     return (
@@ -809,6 +860,13 @@ const RadioRundownPro = () => {
             </div>
             <div className="flex gap-3">
               <button 
+                onClick={() => setShowLiveTime(!showLiveTime)} 
+                className={`${showLiveTime ? 'bg-green-500 hover:bg-green-600 text-white' : t.buttonSecondary} px-3 py-2 rounded-lg transition-colors`}
+                title="Live atoomtijd weergave"
+              >
+                🔴 Live
+              </button>
+              <button 
                 onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} 
                 className={`${t.buttonSecondary} p-2 rounded-lg`}
               >
@@ -885,10 +943,10 @@ const RadioRundownPro = () => {
               <div className={`text-xs font-semibold ${t.textSecondary}`}>ITEMS TOEVOEGEN:</div>
               <button 
                 onClick={() => setShowItemTypeManager(true)}
-                className={`${t.buttonSecondary} px-2 py-1 rounded text-xs`}
+                className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
                 title="Item types beheren"
               >
-                <Settings size={12} />
+                <Settings size={16} />
               </button>
             </div>
             <div className="flex gap-2 flex-wrap">
@@ -968,39 +1026,89 @@ const RadioRundownPro = () => {
 
         {/* Main content - dynamische layout */}
         <div className={`grid gap-6 ${showClock ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
-          {/* Rundown list - krijgt volledige breedte als klok verborgen is */}
-          <div className={`${t.card} rounded-lg p-6 shadow border ${t.border} ${!showClock ? 'lg:col-span-1' : ''}`}>
-            <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>Rundown</h2>
-            <RundownList 
-              items={items}
-              expandedItems={expandedItems}
-              dragOverIndex={dragOverIndex}
-              theme={theme}
-              formatTimeShort={formatTimeShort}
-              formatTime={formatTime}
-              getCumulativeTime={getCumulativeTime}
-              toggleExpanded={toggleExpanded}
-              setEditingItem={setEditingItem}
-              deleteItem={deleteItem}
-              handleDragStart={handleDragStart}
-              handleDragOver={handleDragOver}
-              handleDrop={handleDrop}
-            />
+          {/* Linker kolom: Rundown met eventuele live tijd */}
+          <div className="space-y-6">
+            {/* Live tijd display binnen de rundown kolom als klok verborgen is */}
+            {showLiveTime && !showClock && (
+              <div className={`${t.card} rounded-lg p-4 shadow border ${t.border}`}>
+                <div className="flex items-center justify-center">
+                  <div className="text-center">
+                    <div className={`text-xs font-medium mb-1 ${t.textSecondary}`}>
+                      🔴 LIVE ATOOMTIJD
+                    </div>
+                    <div className={`text-4xl font-mono font-bold ${t.text} tracking-wider`} style={{
+                      fontFamily: 'Consolas, "Courier New", monospace',
+                      letterSpacing: '0.1em'
+                    }}>
+                      {liveTime || '00:00:00'}
+                    </div>
+                    <div className={`text-xs mt-1 ${t.textSecondary}`}>
+                      Nederlandse tijd (CET/CEST)
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Rundown list */}
+            <div className={`${t.card} rounded-lg p-6 shadow border ${t.border}`}>
+              <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>Rundown</h2>
+              <RundownList 
+                items={items}
+                expandedItems={expandedItems}
+                dragOverIndex={dragOverIndex}
+                theme={theme}
+                formatTimeShort={formatTimeShort}
+                formatTime={formatTime}
+                getCumulativeTime={getCumulativeTime}
+                toggleExpanded={toggleExpanded}
+                setEditingItem={setEditingItem}
+                deleteItem={deleteItem}
+                handleDragStart={handleDragStart}
+                handleDragOver={handleDragOver}
+                handleDrop={handleDrop}
+              />
+            </div>
           </div>
 
-          {/* Clock - alleen tonen als showClock true is */}
+          {/* Rechter kolom: Klok met eventuele live tijd */}
           {showClock && (
-            <div className={`${t.card} rounded-lg p-6 shadow border ${t.border}`}>
-              <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>Klok</h2>
-              <Clock 
-                items={items}
-                currentTime={currentTime}
-                isPlaying={isPlaying}
-                setIsPlaying={setIsPlaying}
-                theme={theme}
-                formatTime={formatTime}
-                formatTimeShort={formatTimeShort}
-              />
+            <div className="space-y-6">
+              {/* Live tijd display binnen de klok kolom als klok zichtbaar is */}
+              {showLiveTime && (
+                <div className={`${t.card} rounded-lg p-4 shadow border ${t.border}`}>
+                  <div className="flex items-center justify-center">
+                    <div className="text-center">
+                      <div className={`text-xs font-medium mb-1 ${t.textSecondary}`}>
+                        🔴 LIVE ATOOMTIJD
+                      </div>
+                      <div className={`text-4xl font-mono font-bold ${t.text} tracking-wider`} style={{
+                        fontFamily: 'Consolas, "Courier New", monospace',
+                        letterSpacing: '0.1em'
+                      }}>
+                        {liveTime || '00:00:00'}
+                      </div>
+                      <div className={`text-xs mt-1 ${t.textSecondary}`}>
+                        Nederlandse tijd (CET/CEST)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Radio klok */}
+              <div className={`${t.card} rounded-lg p-6 shadow border ${t.border}`}>
+                <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>Klok</h2>
+                <Clock 
+                  items={items}
+                  currentTime={currentTime}
+                  isPlaying={isPlaying}
+                  setIsPlaying={setIsPlaying}
+                  theme={theme}
+                  formatTime={formatTime}
+                  formatTimeShort={formatTimeShort}
+                />
+              </div>
             </div>
           )}
         </div>

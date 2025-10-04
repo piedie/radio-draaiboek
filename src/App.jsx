@@ -478,11 +478,19 @@ const RadioRundownPro = () => {
           setCurrentTime(prev => {
             const newTime = elapsedSeconds >= totalDuration ? totalDuration : elapsedSeconds;
             
-            // Sync naar externe klok
+            // Sync naar externe klok - inclusief items!
             localStorage.setItem('radio-clock-state', JSON.stringify({
               currentTime: newTime,
               isPlaying: newTime < totalDuration,
               totalDuration,
+              items: items.map(item => ({
+                id: item.id,
+                title: item.title,
+                type: item.type,
+                duration: item.duration,
+                color: item.color,
+                artist: item.artist
+              })),
               timestamp: Date.now()
             }));
             
@@ -523,7 +531,8 @@ const RadioRundownPro = () => {
         title: item.title,
         type: item.type,
         duration: item.duration,
-        color: item.color
+        color: item.color,
+        artist: item.artist
       })),
       timestamp: Date.now()
     }));

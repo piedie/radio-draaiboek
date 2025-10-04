@@ -68,14 +68,20 @@
           const saved = localStorage.getItem('radio-clock-state');
           if (saved) {
             const data = JSON.parse(saved);
-            // Check if data is recent (within last 5 seconds)
-            if (Date.now() - data.timestamp < 5000) {
+            // Check if data is recent (within last 10 seconds for better reliability)
+            if (Date.now() - data.timestamp < 10000) {
+              const prevItemsLength = clockData.items?.length || 0;
               clockData = {
                 currentTime: data.currentTime || 0,
                 isPlaying: data.isPlaying || false,
                 totalDuration: data.totalDuration || 0,
                 items: data.items || []
               };
+              
+              // Debug logging when items change
+              if (clockData.items.length !== prevItemsLength) {
+                console.log('🔄 Items updated in external clock:', clockData.items.length, 'items');
+              }
             }
           }
         } catch (error) {
@@ -85,15 +91,26 @@
 
       // Poll localStorage for updates with higher frequency for smoother updates
       let lastUpdateTime = 0;
+      let lastItemsUpdate = 0;
       
       function pollClockData() {
+        const prevItems = JSON.stringify(clockData.items);
         loadClockData();
+        
+        // Check if items changed
+        const itemsChanged = prevItems !== JSON.stringify(clockData.items);
         
         // Only update display if data changed or if playing (for smooth seconds)
         const now = Date.now();
-        if (clockData.isPlaying || now - lastUpdateTime > 500) {
+        if (clockData.isPlaying || itemsChanged || now - lastUpdateTime > 500) {
           updateClock();
           lastUpdateTime = now;
+        }
+        
+        // Update items more frequently when playing
+        if (itemsChanged || (clockData.isPlaying && now - lastItemsUpdate > 100)) {
+          updateItemsList();
+          lastItemsUpdate = now;
         }
         
         requestAnimationFrame(pollClockData);
@@ -138,10 +155,7 @@
         document.getElementById('status-display').textContent = 
           clockData.isPlaying ? '▶️ Afspelen' : '⏸️ Gestopt';
 
-        // Update items list
-        updateItemsList();
-
-        // Draw clock
+        // Draw clock (always update for visual feedback)
         drawClock();
       }
 

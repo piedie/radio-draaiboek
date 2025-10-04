@@ -857,7 +857,7 @@ const RadioRundownPro = () => {
               onClick={() => window.open('/clock.html', '_blank')} 
               className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
             >
-              📺 Externe Klok
+              📺 Externe klok
             </button>
             <button 
               onClick={() => setShowPrintModal(true)} 

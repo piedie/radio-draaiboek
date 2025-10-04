@@ -21,7 +21,7 @@ const Clock = ({
   };
 
   const radius = 140;
-  const center = 160;
+  const center = 180; // Vergroot center voor meer ruimte
   const hourDuration = 3600;
   const totalDuration = items.reduce((sum, item) => sum + item.duration, 0);
 
@@ -66,7 +66,7 @@ const Clock = ({
 
   return (
     <div className="flex flex-col items-center">
-      <svg width="320" height="320" className="mb-4">
+      <svg width="380" height="380" className="mb-4">
         {segments}
         {[0, 15, 30, 45].map(min => {
           const a = (min / 60) * 360 - 90;
@@ -82,8 +82,8 @@ const Clock = ({
                 strokeWidth={2} 
               />
               <text 
-                x={center + (radius + 25) * Math.cos(rad)} 
-                y={center + (radius + 25) * Math.sin(rad)} 
+                x={center + (radius + 20) * Math.cos(rad)} 
+                y={center + (radius + 20) * Math.sin(rad)} 
                 textAnchor="middle" 
                 dominantBaseline="middle" 
                 className={`text-base font-bold ${t.text}`} 

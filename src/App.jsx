@@ -260,20 +260,89 @@ const RadioRundownPro = () => {
   const addItem = async (item) => {
     if (!currentRundownId) return;
     const position = items.length;
-    const { data } = await supabase.from('items').insert([{ runbook_id: currentRundownId, ...item, position }]).select();
-    if (data) setItems([...items, data[0]]);
+    
+    // Filter out fields that don't exist in database schema
+    const dbFields = {
+      runbook_id: currentRundownId,
+      position: position,
+      type: item.type,
+      title: item.title,
+      artist: item.artist,
+      duration: item.duration,
+      notes: item.notes,
+      first_words: item.first_words,
+      last_words: item.last_words,
+      color: item.color,
+      connection_type: item.connection_type,
+      phone_number: item.phone_number,
+      spotify_url: item.spotify_url,
+      spotify_preview_url: item.spotify_preview_url,
+      audio_files: item.audio_files,
+      user_item_type_id: item.user_item_type_id
+    };
+    
+    // Remove undefined values
+    Object.keys(dbFields).forEach(key => {
+      if (dbFields[key] === undefined) {
+        delete dbFields[key];
+      }
+    });
+    
+    console.log('🔄 Adding item to database:', dbFields);
+    
+    try {
+      const { data, error } = await supabase.from('items').insert([dbFields]).select();
+      
+      if (error) {
+        console.error('❌ Database insert failed:', error);
+        return;
+      }
+      
+      console.log('✅ Item added to database:', data[0]);
+      if (data) setItems([...items, data[0]]);
+    } catch (error) {
+      console.error('❌ Unexpected error adding item:', error);
+    }
+    
     setShowAddForm(false);
   };
 
   const updateItem = async (id, updated) => {
     console.log('🔄 Updating item:', { id, updated });
     
+    // Filter out fields that don't exist in database schema
+    const dbFields = {
+      type: updated.type,
+      title: updated.title,
+      artist: updated.artist,
+      duration: updated.duration,
+      notes: updated.notes,
+      first_words: updated.first_words,
+      last_words: updated.last_words,
+      color: updated.color,
+      connection_type: updated.connection_type,
+      phone_number: updated.phone_number,
+      spotify_url: updated.spotify_url,
+      spotify_preview_url: updated.spotify_preview_url,
+      audio_files: updated.audio_files,
+      user_item_type_id: updated.user_item_type_id
+    };
+    
+    // Remove undefined/null values to avoid database errors
+    Object.keys(dbFields).forEach(key => {
+      if (dbFields[key] === undefined) {
+        delete dbFields[key];
+      }
+    });
+    
+    console.log('🔄 Filtered database fields:', dbFields);
+    
     try {
-      const { data, error } = await supabase.from('items').update(updated).eq('id', id).select();
+      const { data, error } = await supabase.from('items').update(dbFields).eq('id', id).select();
       
       if (error) {
         console.error('❌ Database update failed:', error);
-        console.error('❌ Failed to update item:', { id, updated });
+        console.error('❌ Failed to update item:', { id, dbFields });
         return;
       }
       

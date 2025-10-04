@@ -860,13 +860,6 @@ const RadioRundownPro = () => {
             </div>
             <div className="flex gap-3">
               <button 
-                onClick={() => setShowLiveTime(!showLiveTime)} 
-                className={`${showLiveTime ? 'bg-green-500 hover:bg-green-600 text-white' : t.buttonSecondary} px-3 py-2 rounded-lg transition-colors`}
-                title="Live atoomtijd weergave"
-              >
-                🔴 Live
-              </button>
-              <button 
                 onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} 
                 className={`${t.buttonSecondary} p-2 rounded-lg`}
               >
@@ -918,6 +911,13 @@ const RadioRundownPro = () => {
               📺 Externe klok
             </button>
             <button 
+              onClick={() => setShowLiveTime(!showLiveTime)} 
+              className={`${showLiveTime ? 'bg-green-500 hover:bg-green-600 text-white' : t.buttonSecondary} px-3 py-2 rounded-lg text-sm transition-colors`}
+              title="Live atoomtijd weergave"
+            >
+              🔴 Live
+            </button>
+            <button 
               onClick={() => setShowPrintModal(true)} 
               className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
             >
@@ -940,10 +940,10 @@ const RadioRundownPro = () => {
           {/* Quick add buttons */}
           <div className={`border-t pt-3 mb-2 ${t.border}`}>
             <div className="flex items-center justify-between mb-2">
-              <div className={`text-xs font-semibold ${t.textSecondary}`}>ITEMS TOEVOEGEN:</div>
+              <div className={`text-sm font-semibold ${t.textSecondary}`}>ITEMS TOEVOEGEN:</div>
               <button 
                 onClick={() => setShowItemTypeManager(true)}
-                className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
+                className={`${t.buttonSecondary} px-3 py-2 rounded text-sm flex items-center`}
                 title="Item types beheren"
               >
                 <Settings size={16} />

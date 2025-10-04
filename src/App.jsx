@@ -267,11 +267,11 @@ const RadioRundownPro = () => {
         }, 100);
         
         console.log('🎉 Runbook duplicated successfully');
-        alert(`Draaiboek "${original.name}" succesvol gekopieerd!`);
+        console.log(`✅ Draaiboek "${original.name}" succesvol gekopieerd!`);
       }
     } catch (error) {
       console.error('❌ Error duplicating runbook:', error);
-      alert('Fout bij kopiëren van draaiboek: ' + error.message);
+      console.error('❌ Fout bij kopiëren van draaiboek:', error.message);
     }
   };
 
@@ -329,7 +329,7 @@ const RadioRundownPro = () => {
       console.log('✅ Feedback saved:', data);
       setFeedback('');
       setShowFeedbackModal(false);
-      alert('Bedankt voor je feedback! 🙏');
+      console.log('✅ Feedback submitted successfully! Thanks! 🙏');
     } catch (error) {
       console.error('❌ Feedback error details:', {
         message: error.message,
@@ -346,7 +346,8 @@ const RadioRundownPro = () => {
         errorMsg = 'Feedback tabel bestaat niet. Database migratie nodig.';
       }
       
-      alert(errorMsg + '\n\nDetails: ' + error.message);
+      console.error('❌ ' + errorMsg);
+      console.error('❌ Details:', error.message);
     }
   };
 
@@ -699,7 +700,7 @@ const RadioRundownPro = () => {
   // Download alle draaiboeken als TXT bestanden
   const downloadAllRundowns = async () => {
     if (rundowns.length === 0) {
-      alert('Geen draaiboeken om te downloaden');
+      console.log('❌ Geen draaiboeken om te downloaden');
       return;
     }
 
@@ -785,11 +786,11 @@ const RadioRundownPro = () => {
       }
       
       console.log('✅ Bulk download completed');
-      alert(`${rundowns.length} draaiboeken succesvol gedownload!`);
+      console.log(`✅ ${rundowns.length} draaiboeken succesvol gedownload!`);
       
     } catch (error) {
       console.error('❌ Error during bulk download:', error);
-      alert('Fout bij downloaden: ' + error.message);
+      console.error('❌ Fout bij downloaden:', error.message);
     }
   };
 

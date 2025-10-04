@@ -9,7 +9,7 @@ import RundownList from './components/RundownList';
 import { loadUserItemTypes, getItemTypeByName } from './utils/itemTypeManager';
 
 // Versie informatie
-const APP_VERSION = '2.6';
+const APP_VERSION = '2.7';
 const BUILD_DATE = '2025-10-04';
 const COPYRIGHT_YEAR = new Date().getFullYear();
 
@@ -375,11 +375,42 @@ const RadioRundownPro = () => {
   useEffect(() => {
     if (isPlaying) {
       intervalRef.current = setInterval(() => {
-        setCurrentTime(prev => { if (prev >= totalDuration) { setIsPlaying(false); return 0; } return prev + 1; });
+        setCurrentTime(prev => { 
+          const newTime = prev >= totalDuration ? 0 : prev + 1;
+          // Sync naar externe klok
+          localStorage.setItem('radio-clock-state', JSON.stringify({
+            currentTime: newTime,
+            isPlaying: newTime < totalDuration,
+            totalDuration,
+            timestamp: Date.now()
+          }));
+          if (prev >= totalDuration) { 
+            setIsPlaying(false); 
+            return 0; 
+          } 
+          return newTime;
+        });
       }, 1000);
     } else if (intervalRef.current) clearInterval(intervalRef.current);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [isPlaying, totalDuration]);
+
+  // Sync klok status naar localStorage voor externe klok
+  useEffect(() => {
+    localStorage.setItem('radio-clock-state', JSON.stringify({
+      currentTime,
+      isPlaying,
+      totalDuration,
+      items: items.map(item => ({
+        id: item.id,
+        title: item.title,
+        type: item.type,
+        duration: item.duration,
+        color: item.color
+      })),
+      timestamp: Date.now()
+    }));
+  }, [currentTime, isPlaying, totalDuration, items]);
 
   // Keyboard shortcuts for game audio
   useEffect(() => {

@@ -62,7 +62,37 @@
         totalDuration: 0
       };
 
-      // Listen for messages from parent window
+      // Listen for localStorage changes and load initial data
+      function loadClockData() {
+        try {
+          const saved = localStorage.getItem('radio-clock-state');
+          if (saved) {
+            const data = JSON.parse(saved);
+            // Check if data is recent (within last 5 seconds)
+            if (Date.now() - data.timestamp < 5000) {
+              clockData = {
+                currentTime: data.currentTime || 0,
+                isPlaying: data.isPlaying || false,
+                totalDuration: data.totalDuration || 0,
+                items: data.items || []
+              };
+            }
+          }
+        } catch (error) {
+          console.error('Error loading clock data:', error);
+        }
+      }
+
+      // Poll localStorage for updates
+      setInterval(() => {
+        loadClockData();
+        updateClock();
+      }, 1000);
+
+      // Load initial data
+      loadClockData();
+
+      // Legacy: Listen for messages from parent window (fallback)
       window.addEventListener('message', (event) => {
         if (event.data.type === 'CLOCK_UPDATE') {
           clockData = event.data.data;

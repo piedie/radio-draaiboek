@@ -98,7 +98,6 @@ const ItemForm = ({
   };
 
   const selectSpotifyResult = (result) => {
-    console.log('Selected Spotify result:', result);
     setForm({ 
       ...form, 
       title: result.name, 
@@ -109,41 +108,21 @@ const ItemForm = ({
     setShowLocal(false);
     setLocalResults([]);
     setSearchQuery('');
-    
-    // Show user feedback
-    if (result.preview_url) {
-      console.log('Preview URL saved:', result.preview_url);
-    } else {
-      console.warn('No preview URL available for this track');
-    }
   };
 
   const testPreviewUrl = async (previewUrl) => {
     try {
-      console.log('Testing preview URL accessibility:', previewUrl);
-      
-      // Test if URL is reachable with a HEAD request
       const response = await fetch(previewUrl, { 
         method: 'HEAD',
-        mode: 'no-cors' // This might help with CORS issues
+        mode: 'no-cors'
       });
-      
-      console.log('URL test response:', {
-        ok: response.ok,
-        status: response.status,
-        type: response.type
-      });
-      
       return true;
     } catch (error) {
-      console.error('URL test failed:', error);
       return false;
     }
   };
 
   const playPreviewSimple = (previewUrl) => {
-    console.log('Trying simple preview method:', previewUrl);
-    
     if (!previewUrl) {
       alert('Geen preview beschikbaar voor dit nummer');
       return;
@@ -155,18 +134,14 @@ const ItemForm = ({
       previewAudio.currentTime = 0;
     }
 
-    // Simple method without CORS headers
     const audio = new Audio(previewUrl);
     audio.volume = 0.5;
     
     audio.addEventListener('canplay', () => {
-      console.log('Simple method: Audio can play');
       audio.play().then(() => {
-        console.log('Simple method: Playing successfully');
         setIsPlaying(true);
         setPreviewAudio(audio);
       }).catch(error => {
-        console.error('Simple method play failed:', error);
         alert('Browser blokkeert automatisch afspelen. Probeer eerst op de pagina te klikken.');
       });
     });
@@ -177,7 +152,6 @@ const ItemForm = ({
     });
 
     audio.addEventListener('error', (e) => {
-      console.error('Simple method error:', e);
       alert('Preview niet beschikbaar. Dit nummer heeft mogelijk geen preview op Spotify.');
       setIsPlaying(false);
       setPreviewAudio(null);
@@ -215,20 +189,11 @@ const ItemForm = ({
     const audio = new Audio();
     const testUrl = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0gBjiG0fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D0vW0g';
     
-    console.log('Testing browser audio capabilities:');
-    console.log('- Audio constructor available:', !!window.Audio);
-    console.log('- AudioContext available:', !!(window.AudioContext || window.webkitAudioContext));
-    console.log('- Can play MP3:', audio.canPlayType('audio/mpeg'));
-    console.log('- Can play OGG:', audio.canPlayType('audio/ogg'));
-    console.log('- Can play WAV:', audio.canPlayType('audio/wav'));
-    console.log('- User agent:', navigator.userAgent);
-    
-    // Test autoplay permissions
+    // Test autoplay permissions quietly
     audio.play().then(() => {
       audio.pause();
-      console.log('- Autoplay: ALLOWED');
-    }).catch(error => {
-      console.log('- Autoplay: BLOCKED -', error.name);
+    }).catch(() => {
+      // Autoplay blocked - no problem
     });
   };
 

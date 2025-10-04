@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Edit2, Trash2, GripVertical, Music, Mic, Volume2, Play, Pause } from 'lucide-react';
+import { Edit2, Trash2, GripVertical, Music, Mic, Volume2, Play, Pause, Plus, Minus, User } from 'lucide-react';
 
 const RundownItem = ({ 
   item, 
@@ -21,6 +21,19 @@ const RundownItem = ({
   const [playingAudioId, setPlayingAudioId] = useState(null);
   const audioRef = useRef(null);
   const gameAudioRefs = useRef({});
+  
+  // Scoreboard state - initialize with default scores if not present
+  const [scores, setScores] = useState(() => {
+    if (item.type === 'game' && item.scores) {
+      return item.scores;
+    }
+    return [
+      { name: 'Speler 1', score: 0 },
+      { name: 'Speler 2', score: 0 },
+      { name: 'Speler 3', score: 0 }
+    ];
+  });
+  const [editingPlayerName, setEditingPlayerName] = useState(null);
   
   // Debug logging voor items (alleen bij problemen)
   if (!item.title && item.type === 'music') {
@@ -130,6 +143,37 @@ const RundownItem = ({
     });
   };
 
+  // Scoreboard functions
+  const updateScore = (playerIndex, delta) => {
+    const newScores = [...scores];
+    newScores[playerIndex].score = Math.max(0, newScores[playerIndex].score + delta);
+    setScores(newScores);
+    
+    // Save to item data (this would need to be passed up to parent to persist)
+    if (onEdit) {
+      const updatedItem = { ...item, scores: newScores };
+      // Note: We would need onScoreUpdate callback to persist this
+    }
+  };
+
+  const updatePlayerName = (playerIndex, newName) => {
+    const newScores = [...scores];
+    newScores[playerIndex].name = newName || `Speler ${playerIndex + 1}`;
+    setScores(newScores);
+    setEditingPlayerName(null);
+    
+    // Save to item data
+    if (onEdit) {
+      const updatedItem = { ...item, scores: newScores };
+      // Note: We would need onScoreUpdate callback to persist this
+    }
+  };
+
+  const resetAllScores = () => {
+    const newScores = scores.map(player => ({ ...player, score: 0 }));
+    setScores(newScores);
+  };
+
   return (
     <div 
       draggable 
@@ -210,16 +254,6 @@ const RundownItem = ({
             </button>
           )}
           
-          {/* Debug: toon preview icon als er geen URL is maar het wel een muziek item is */}
-          {item.type === 'music' && !item.spotify_preview_url && (
-            <div 
-              className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-400 text-xs"
-              title="Geen Spotify preview - bewerk item en zoek via Spotify om preview toe te voegen"
-            >
-              🎵
-            </div>
-          )}
-          
           <button 
             onClick={() => onEdit(item)} 
             className={t.textSecondary}
@@ -293,6 +327,85 @@ const RundownItem = ({
                 </div>
               </div>
             )}
+            
+            {/* Scoreboard for game items */}
+            {item.type === 'game' && (
+              <div className="mb-3">
+                <div className={`flex items-center justify-between mb-2`}>
+                  <div className={`text-xs font-semibold ${t.textSecondary} flex items-center`}>
+                    <User size={12} className="mr-1" />
+                    🏆 Scoreboard
+                  </div>
+                  <button
+                    onClick={resetAllScores}
+                    className={`text-xs px-2 py-1 rounded ${theme === 'light' ? 'bg-gray-200 hover:bg-gray-300' : 'bg-gray-600 hover:bg-gray-500'} transition-colors`}
+                    title="Reset alle scores naar 0"
+                  >
+                    Reset
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {scores.map((player, index) => (
+                    <div
+                      key={index}
+                      className={`p-2 rounded border ${t.border} bg-gray-50 dark:bg-gray-700`}
+                    >
+                      <div className="text-center">
+                        {editingPlayerName === index ? (
+                          <input
+                            type="text"
+                            value={player.name}
+                            onChange={(e) => {
+                              const newScores = [...scores];
+                              newScores[index].name = e.target.value;
+                              setScores(newScores);
+                            }}
+                            onBlur={(e) => updatePlayerName(index, e.target.value)}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                updatePlayerName(index, e.target.value);
+                              }
+                            }}
+                            className={`text-xs font-medium text-center w-full mb-1 px-1 py-0.5 rounded ${t.input}`}
+                            autoFocus
+                          />
+                        ) : (
+                          <div
+                            onClick={() => setEditingPlayerName(index)}
+                            className={`text-xs font-medium cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 px-1 py-0.5 rounded mb-1 ${t.text}`}
+                            title="Klik om naam te bewerken"
+                          >
+                            {player.name}
+                          </div>
+                        )}
+                        
+                        <div className={`text-lg font-bold mb-2 ${t.text}`}>
+                          {player.score}
+                        </div>
+                        
+                        <div className="flex justify-center gap-1">
+                          <button
+                            onClick={() => updateScore(index, -1)}
+                            className="p-1 rounded bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                            title="Score verlagen"
+                          >
+                            <Minus size={12} />
+                          </button>
+                          <button
+                            onClick={() => updateScore(index, 1)}
+                            className="p-1 rounded bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
+                            title="Score verhogen"
+                          >
+                            <Plus size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             {item.notes && (
               <div className="mb-3">
                 <div className={`text-xs mb-1 font-semibold ${t.textSecondary}`}>

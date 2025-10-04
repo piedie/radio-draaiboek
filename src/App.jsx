@@ -9,7 +9,7 @@ import RundownList from './components/RundownList';
 import { loadUserItemTypes, getItemTypeByName } from './utils/itemTypeManager';
 
 // Versie informatie
-const APP_VERSION = '2.3';
+const APP_VERSION = '2.4';
 const BUILD_DATE = '2025-10-04';
 const COPYRIGHT_YEAR = new Date().getFullYear();
 

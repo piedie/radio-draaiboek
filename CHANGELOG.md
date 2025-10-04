@@ -2,6 +2,30 @@
 
 Alle belangrijke wijzigingen worden hier gedocumenteerd.
 
+## [2.9.0] - 2025-10-04
+
+### ✨ Toegevoegd
+- **Bulk Export Functionaliteit**
+  - "Download Alle" knop in draaiboek overzicht
+  - Alle draaiboeken als aparte TXT-bestanden downloaden
+  - Volledige export met alle item details (eerste woorden, hoofdtekst, laatste woorden)
+  - Spotify ID's, audio URL's en scoreboard informatie
+  - Veilige bestandsnamen met datum
+
+### 🔧 Verbeterd
+- **Externe Klok Synchronisatie**
+  - Items worden nu altijd meegestuurd tijdens timer updates
+  - Verbeterde update-frequentie voor rundown items in externe klok
+  - Betere detectie van item-wijzigingen
+  - Artist-veld toegevoegd aan sync data
+  - Debug logging toegevoegd voor troubleshooting
+
+### 🐛 Opgelost
+- Taartpunten en rundown items waren niet zichtbaar in externe clock.html tijdens afspelen
+- Items synchronisatie tijdens klok-timing verbeterd
+
+---
+
 ## [2.1.0] - 2025-10-04
 
 ### ✨ Toegevoegd

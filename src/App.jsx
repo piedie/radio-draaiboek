@@ -1,6 +1,6 @@
 // src/App.jsx - Radio Rundown Pro v2.2 - Met Custom Item Types
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Copy, LogOut, Moon, Sun, FolderOpen, Trash2, Settings, MessageSquare } from 'lucide-react';
+import { Plus, Copy, LogOut, Moon, Sun, FolderOpen, Trash2, Settings, MessageSquare, Download } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import Clock from './components/Clock';
 import ItemForm from './components/ItemForm';
@@ -9,7 +9,7 @@ import RundownList from './components/RundownList';
 import { loadUserItemTypes, getItemTypeByName } from './utils/itemTypeManager';
 
 // Versie informatie
-const APP_VERSION = '2.8';
+const APP_VERSION = '2.9';
 const BUILD_DATE = '2025-10-04';
 const COPYRIGHT_YEAR = new Date().getFullYear();
 
@@ -607,6 +607,103 @@ const RadioRundownPro = () => {
     setShowPrintModal(false);
   };
 
+  // Download alle draaiboeken als TXT bestanden
+  const downloadAllRundowns = async () => {
+    if (rundowns.length === 0) {
+      alert('Geen draaiboeken om te downloaden');
+      return;
+    }
+
+    try {
+      console.log('📥 Starting bulk download of', rundowns.length, 'rundowns...');
+      
+      for (const rundown of rundowns) {
+        // Haal items op voor dit runbook
+        const { data: rundownItems, error } = await supabase
+          .from('items')
+          .select('*')
+          .eq('runbook_id', rundown.id)
+          .order('position');
+        
+        if (error) {
+          console.error('Error loading items for rundown', rundown.id, error);
+          continue;
+        }
+
+        // Bereken totale duur voor dit rundown
+        const rundownTotalDuration = (rundownItems || []).reduce((sum, item) => sum + item.duration, 0);
+
+        // Genereer content voor dit rundown
+        let content = 'RADIO DRAAIBOEK\n================\n\n';
+        content += 'Draaiboek: ' + rundown.name + '\n';
+        content += 'Datum: ' + rundown.date + '\n';
+        content += 'Totale duur: ' + formatTime(rundownTotalDuration) + '\n';
+        content += 'Geëxporteerd: ' + new Date().toLocaleString('nl-NL') + '\n\n================\n\n';
+        
+        if (rundownItems && rundownItems.length > 0) {
+          rundownItems.forEach((item, index) => {
+            // Bereken cumulatieve tijd voor dit item
+            const cumTime = rundownItems.slice(0, index + 1).reduce((sum, it) => sum + it.duration, 0);
+            
+            content += (index + 1) + '. [' + (item.type || 'ONBEKEND').toUpperCase() + '] ' + (item.title || 'Geen titel') + '\n';
+            
+            if (item.artist) content += '   Artiest: ' + item.artist + '\n';
+            
+            content += '   Duur: ' + formatTimeShort(item.duration) + ' | Totaal: ' + formatTime(cumTime) + '\n';
+            
+            if (item.connection_type) {
+              content += '   Verbinding: ' + item.connection_type;
+              if (item.phone_number && item.connection_type === 'Telefoon') {
+                content += ' (' + item.phone_number + ')';
+              }
+              content += '\n';
+            }
+            
+            // Volledige export - alle details
+            if (item.first_words) content += '   EERSTE WOORDEN: ' + item.first_words + '\n';
+            if (item.notes) content += '   HOOFDTEKST: ' + item.notes + '\n';
+            if (item.last_words) content += '   LAATSTE WOORDEN: ' + item.last_words + '\n';
+            
+            // Extra velden voor specifieke item types
+            if (item.spotify_track_id) content += '   Spotify ID: ' + item.spotify_track_id + '\n';
+            if (item.audio_url) content += '   Audio URL: ' + item.audio_url + '\n';
+            if (item.has_scoreboard) content += '   Scoreboard: Ja\n';
+            
+            content += '\n';
+          });
+        } else {
+          content += '(Geen items in dit draaiboek)\n\n';
+        }
+        
+        // Download dit bestand
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // Maak een veilige bestandsnaam
+        const safeName = rundown.name.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-');
+        link.download = `draaiboek-${safeName}-${rundown.date}.txt`;
+        
+        // Trigger download
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        // Kleine delay tussen downloads om browser niet te overbelasten
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      
+      console.log('✅ Bulk download completed');
+      alert(`${rundowns.length} draaiboeken succesvol gedownload!`);
+      
+    } catch (error) {
+      console.error('❌ Error during bulk download:', error);
+      alert('Fout bij downloaden: ' + error.message);
+    }
+  };
+
   // Login screen
   if (showLogin) {
     return (
@@ -710,7 +807,7 @@ const RadioRundownPro = () => {
               </button>
               <button 
                 onClick={() => setShowFeedbackModal(true)} 
-                className={`${t.buttonSecondary} p-2 rounded-lg`}
+                className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg transition-colors"
                 title="Feedback & Suggesties"
               >
                 <MessageSquare size={20} />
@@ -816,7 +913,17 @@ const RadioRundownPro = () => {
         {/* Rundown selector */}
         {showRundownSelector && (
           <div className={`${t.card} rounded-lg p-4 mb-6 shadow border ${t.border}`}>
-            <h3 className={`font-bold mb-3 ${t.text}`}>Mijn Draaiboeken</h3>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className={`font-bold ${t.text}`}>Mijn Draaiboeken</h3>
+              <button 
+                onClick={downloadAllRundowns}
+                className={`${t.button} px-3 py-1 rounded-lg text-sm flex items-center gap-2`}
+                title="Download alle draaiboeken als TXT bestanden"
+              >
+                <Download size={16} />
+                Download Alle
+              </button>
+            </div>
             <div className="space-y-2">
               {rundowns.map(rb => (
                 <div 

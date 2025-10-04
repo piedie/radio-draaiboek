@@ -13,6 +13,84 @@ const APP_VERSION = '3.1';
 const BUILD_DATE = '2025-10-05';
 const COPYRIGHT_YEAR = new Date().getFullYear();
 
+// Live Dashboard Component (buiten hoofdcomponent gedefinieerd)
+const LiveDashboard = ({ theme, liveTime, trafficData, newsData }) => {
+  const t = theme === 'light' ? {
+    text: 'text-gray-900',
+    textSecondary: 'text-gray-600',
+    card: 'bg-white',
+    border: 'border-gray-200'
+  } : {
+    text: 'text-white',
+    textSecondary: 'text-gray-400',
+    card: 'bg-gray-800',
+    border: 'border-gray-700'
+  };
+
+  return (
+    <div className={`${t.card} rounded-lg p-4 shadow border ${t.border}`}>
+      <div className={`text-xs font-medium mb-3 text-center ${t.textSecondary}`}>
+        🔴 LIVE RADIO DASHBOARD
+      </div>
+      
+      <div className="grid grid-cols-3 gap-4 items-center">
+        {/* Links: Verkeersinformatie */}
+        <div className="text-center">
+          <div className={`text-xs font-medium mb-1 ${t.textSecondary}`}>
+            🚗 VERKEER NL
+          </div>
+          <div className={`text-lg font-bold ${t.text}`}>
+            {trafficData.loading ? (
+              <span className="animate-pulse">...</span>
+            ) : (
+              `${trafficData.totalKm} km`
+            )}
+          </div>
+          <div className={`text-xs ${t.textSecondary}`}>
+            file totaal
+          </div>
+        </div>
+        
+        {/* Midden: Atoomtijd */}
+        <div className="text-center">
+          <div className={`text-xs font-medium mb-1 ${t.textSecondary}`}>
+            ⏰ ATOOMTIJD
+          </div>
+          <div className={`text-3xl font-mono font-bold ${t.text} tracking-wider`} style={{
+            fontFamily: 'Consolas, "Courier New", monospace',
+            letterSpacing: '0.1em'
+          }}>
+            {liveTime || '00:00:00'}
+          </div>
+          <div className={`text-xs ${t.textSecondary}`}>
+            CET/CEST
+          </div>
+        </div>
+        
+        {/* Rechts: Nieuws headlines */}
+        <div className="text-center">
+          <div className={`text-xs font-medium mb-1 ${t.textSecondary}`}>
+            📰 NIEUWS
+          </div>
+          <div className="space-y-1">
+            {newsData.loading ? (
+              <div className="animate-pulse">
+                <div className={`text-xs ${t.textSecondary}`}>Laden...</div>
+              </div>
+            ) : (
+              newsData.headlines.map((headline, index) => (
+                <div key={index} className={`text-xs ${t.text} truncate`} title={headline.title}>
+                  {headline.title.substring(0, 25)}...
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const RadioRundownPro = () => {
   const [theme, setTheme] = useState('light');
   const [currentUser, setCurrentUser] = useState(null);
@@ -933,70 +1011,6 @@ const RadioRundownPro = () => {
 
   const currentRunbook = rundowns.find(r => r.id === currentRundownId);
 
-  // Live Dashboard Component
-  const LiveDashboard = () => (
-    <div className={`${t.card} rounded-lg p-4 shadow border ${t.border}`}>
-      <div className={`text-xs font-medium mb-3 text-center ${t.textSecondary}`}>
-        🔴 LIVE RADIO DASHBOARD
-      </div>
-      
-      <div className="grid grid-cols-3 gap-4 items-center">
-        {/* Links: Verkeersinformatie */}
-        <div className="text-center">
-          <div className={`text-xs font-medium mb-1 ${t.textSecondary}`}>
-            🚗 VERKEER NL
-          </div>
-          <div className={`text-lg font-bold ${t.text}`}>
-            {trafficData.loading ? (
-              <span className="animate-pulse">...</span>
-            ) : (
-              `${trafficData.totalKm} km`
-            )}
-          </div>
-          <div className={`text-xs ${t.textSecondary}`}>
-            file totaal
-          </div>
-        </div>
-        
-        {/* Midden: Atoomtijd */}
-        <div className="text-center">
-          <div className={`text-xs font-medium mb-1 ${t.textSecondary}`}>
-            ⏰ ATOOMTIJD
-          </div>
-          <div className={`text-3xl font-mono font-bold ${t.text} tracking-wider`} style={{
-            fontFamily: 'Consolas, "Courier New", monospace',
-            letterSpacing: '0.1em'
-          }}>
-            {liveTime || '00:00:00'}
-          </div>
-          <div className={`text-xs ${t.textSecondary}`}>
-            CET/CEST
-          </div>
-        </div>
-        
-        {/* Rechts: Nieuws headlines */}
-        <div className="text-center">
-          <div className={`text-xs font-medium mb-1 ${t.textSecondary}`}>
-            📰 NIEUWS
-          </div>
-          <div className="space-y-1">
-            {newsData.loading ? (
-              <div className="animate-pulse">
-                <div className={`text-xs ${t.textSecondary}`}>Laden...</div>
-              </div>
-            ) : (
-              newsData.headlines.map((headline, index) => (
-                <div key={index} className={`text-xs ${t.text} truncate`} title={headline.title}>
-                  {headline.title.substring(0, 25)}...
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className={`${t.bg} min-h-screen p-6`}>
       <div className="max-w-7xl mx-auto">
@@ -1193,7 +1207,14 @@ const RadioRundownPro = () => {
           {/* Linker kolom: Rundown met eventuele live tijd */}
           <div className="space-y-6">
             {/* Live dashboard binnen de rundown kolom als klok verborgen is */}
-            {showLiveTime && !showClock && <LiveDashboard />}
+            {showLiveTime && !showClock && (
+              <LiveDashboard 
+                theme={theme}
+                liveTime={liveTime}
+                trafficData={trafficData}
+                newsData={newsData}
+              />
+            )}
             
             {/* Rundown list */}
             <div className={`${t.card} rounded-lg p-6 shadow border ${t.border}`}>
@@ -1220,7 +1241,14 @@ const RadioRundownPro = () => {
           {showClock && (
             <div className="space-y-6">
               {/* Live dashboard binnen de klok kolom als klok zichtbaar is */}
-              {showLiveTime && <LiveDashboard />}
+              {showLiveTime && (
+                <LiveDashboard 
+                  theme={theme}
+                  liveTime={liveTime}
+                  trafficData={trafficData}
+                  newsData={newsData}
+                />
+              )}
               
               {/* Radio klok */}
               <div className={`${t.card} rounded-lg p-6 shadow border ${t.border}`}>

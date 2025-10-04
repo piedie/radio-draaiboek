@@ -1,6 +1,6 @@
 // src/App.jsx - Radio Rundown Pro v2.2 - Met Custom Item Types
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Copy, LogOut, Moon, Sun, FolderOpen, Trash2, Settings } from 'lucide-react';
+import { Plus, Copy, LogOut, Moon, Sun, FolderOpen, Trash2, Settings, MessageSquare } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import Clock from './components/Clock';
 import ItemForm from './components/ItemForm';
@@ -9,7 +9,7 @@ import RundownList from './components/RundownList';
 import { loadUserItemTypes, getItemTypeByName } from './utils/itemTypeManager';
 
 // Versie informatie
-const APP_VERSION = '2.5';
+const APP_VERSION = '2.6';
 const BUILD_DATE = '2025-10-04';
 const COPYRIGHT_YEAR = new Date().getFullYear();
 
@@ -38,11 +38,16 @@ const RadioRundownPro = () => {
   
   // State voor klok weergave
   const [showClock, setShowClock] = useState(true);
-  const [showClockWindow, setShowClockWindow] = useState(false);
   
   // State voor item types
   const [userItemTypes, setUserItemTypes] = useState([]);
   const [showItemTypeManager, setShowItemTypeManager] = useState(false);
+  
+  // Feedback state
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [feedback, setFeedback] = useState('');
+  const [feedbackType, setFeedbackType] = useState('suggestion');
   
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -190,6 +195,30 @@ const RadioRundownPro = () => {
     await supabase.from('items').update(updated).eq('id', id);
     setItems(items.map(item => item.id === id ? { ...item, ...updated } : item));
     setEditingItem(null);
+  };
+
+  // Feedback functions
+  const submitFeedback = async () => {
+    if (!feedback.trim()) return;
+    
+    try {
+      const { error } = await supabase.from('feedback').insert([{
+        user_id: currentUser.id,
+        user_email: currentUser.email,
+        type: feedbackType,
+        message: feedback.trim(),
+        created_at: new Date().toISOString()
+      }]);
+      
+      if (error) throw error;
+      
+      setFeedback('');
+      setShowFeedbackModal(false);
+      alert('Bedankt voor je feedback! 🙏');
+    } catch (error) {
+      console.error('Feedback error:', error);
+      alert('Er ging iets mis bij het versturen van feedback.');
+    }
   };
 
   const deleteItem = async (id) => {
@@ -378,11 +407,6 @@ const RadioRundownPro = () => {
     setShowPrintModal(false);
   };
 
-  // Popup klok window
-  const openClockWindow = () => {
-    setShowClockWindow(true);
-  };
-
   // Login screen
   if (showLogin) {
     return (
@@ -485,6 +509,13 @@ const RadioRundownPro = () => {
                 {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
               </button>
               <button 
+                onClick={() => setShowFeedbackModal(true)} 
+                className={`${t.buttonSecondary} p-2 rounded-lg`}
+                title="Feedback & Suggesties"
+              >
+                <MessageSquare size={20} />
+              </button>
+              <button 
                 onClick={handleLogout} 
                 className={`${t.buttonSecondary} px-4 py-2 rounded-lg flex items-center gap-2`}
               >
@@ -517,10 +548,10 @@ const RadioRundownPro = () => {
               🕐 {showClock ? 'Verberg Klok' : 'Toon Klok'}
             </button>
             <button 
-              onClick={openClockWindow} 
+              onClick={() => window.open('/clock.html', '_blank')} 
               className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
             >
-              📺 Popup Klok
+              📺 Externe Klok
             </button>
             <button 
               onClick={() => setShowPrintModal(true)} 
@@ -658,32 +689,6 @@ const RadioRundownPro = () => {
           )}
         </div>
 
-        {/* Popup klok window */}
-        {showClockWindow && (
-          <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
-            <div className={`${t.card} rounded-lg p-8 shadow-2xl max-w-2xl w-full`}>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className={`text-2xl font-bold ${t.text}`}>🕐 Uitzending Klok</h2>
-                <button 
-                  onClick={() => setShowClockWindow(false)} 
-                  className={`${t.buttonSecondary} px-4 py-2 rounded-lg`}
-                >
-                  Sluiten
-                </button>
-              </div>
-              <Clock 
-                items={items}
-                currentTime={currentTime}
-                isPlaying={isPlaying}
-                setIsPlaying={setIsPlaying}
-                theme={theme}
-                formatTime={formatTime}
-                formatTimeShort={formatTimeShort}
-              />
-            </div>
-          </div>
-        )}
-
         {/* Jingle editor modal */}
         {showJingleEditor && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -817,6 +822,58 @@ const RadioRundownPro = () => {
           </div>
         </div>
       </footer>
+      
+      {/* Feedback Modal */}
+      {showFeedbackModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className={`${t.card} p-6 rounded-lg shadow-xl max-w-md w-full mx-4`}>
+            <h2 className={`text-xl font-bold mb-4 ${t.text}`}>Feedback & Suggesties</h2>
+            
+            <div className="mb-4">
+              <label className={`block text-sm mb-2 ${t.text}`}>Type feedback:</label>
+              <select 
+                value={feedbackType} 
+                onChange={(e) => setFeedbackType(e.target.value)}
+                className={`w-full px-3 py-2 rounded border ${t.input}`}
+              >
+                <option value="suggestion">💡 Suggestie</option>
+                <option value="bug">🐛 Bug report</option>
+                <option value="feature">🚀 Feature request</option>
+                <option value="other">💬 Overig</option>
+              </select>
+            </div>
+            
+            <div className="mb-4">
+              <label className={`block text-sm mb-2 ${t.text}`}>Je bericht:</label>
+              <textarea 
+                value={feedback} 
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="Beschrijf je feedback, suggestie of probleem..."
+                className={`w-full px-3 py-2 rounded border h-32 ${t.input}`}
+              />
+            </div>
+            
+            <div className="flex gap-3 justify-end">
+              <button 
+                onClick={() => {
+                  setShowFeedbackModal(false);
+                  setFeedback('');
+                }}
+                className={`${t.buttonSecondary} px-4 py-2 rounded-lg`}
+              >
+                Annuleren
+              </button>
+              <button 
+                onClick={submitFeedback}
+                disabled={!feedback.trim()}
+                className={`${t.button} px-4 py-2 rounded-lg disabled:opacity-50`}
+              >
+                Versturen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

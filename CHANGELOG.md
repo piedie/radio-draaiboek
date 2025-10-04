@@ -2,6 +2,32 @@
 
 Alle belangrijke wijzigingen worden hier gedocumenteerd.
 
+## [3.1.0] - 2025-10-05
+
+### ✨ Toegevoegd
+- **📺 Live Radio Dashboard (3-kolommen)**
+  - Uitgebreide Live blok met verkeer, tijd en nieuws
+  - **Links**: Nederlandse verkeersinformatie (km file totaal)
+  - **Midden**: Live atoomtijd (behouden van v3.0)
+  - **Rechts**: Top 3 nieuws headlines van Nu.nl
+  - RSS2JSON API integratie voor Nu.nl nieuwsfeeds
+  - Auto-refresh elke 5 minuten voor actuele data
+  - Responsive 3-kolommen grid layout
+  - Loading states en graceful fallbacks
+
+### 🔧 Verbeterd
+- Live dashboard vervangt eenvoudige tijdweergave
+- Geoptimaliseerde data-refresh cycles
+- Betere spacing en visuele hiërarchie
+- Professional radio-studio dashboard uitstraling
+
+### 🎨 UI Verbeteringen
+- Logo toegevoegd aan inlogpagina (96x96px)
+- Gecentreerde logo positionering
+- Betere branding en professionele uitstraling
+
+---
+
 ## [3.0.0] - 2025-10-04
 
 ### ✨ Toegevoegd

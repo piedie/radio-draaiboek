@@ -278,7 +278,9 @@ const RadioRundownPro = () => {
       spotify_url: item.spotify_url,
       spotify_preview_url: item.spotify_preview_url,
       audio_files: item.audio_files,
-      user_item_type_id: item.user_item_type_id
+      user_item_type_id: item.user_item_type_id,
+      enable_scoreboard: item.enable_scoreboard  // Include scoreboard toggle
+      // Note: scores array is kept in React state only, not saved to database
     };
     
     // Remove undefined values
@@ -325,7 +327,9 @@ const RadioRundownPro = () => {
       spotify_url: updated.spotify_url,
       spotify_preview_url: updated.spotify_preview_url,
       audio_files: updated.audio_files,
-      user_item_type_id: updated.user_item_type_id
+      user_item_type_id: updated.user_item_type_id,
+      enable_scoreboard: updated.enable_scoreboard  // Include scoreboard toggle
+      // Note: scores array is kept in React state only, not saved to database
     };
     
     // Remove undefined/null values to avoid database errors

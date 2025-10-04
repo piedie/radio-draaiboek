@@ -364,7 +364,7 @@ const ItemForm = ({
 
               {/* Spotify zoeken */}
               <div>
-                <label className={`block text-sm mb-1 ${t.text}`}>Spotify Zoeken</label>
+                <label className={`block text-sm mb-1 ${t.text}`}>Zoek met Spotify</label>
                 <div className="flex gap-2">
                   <input 
                     type="text" 

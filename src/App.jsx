@@ -462,6 +462,15 @@ const RadioRundownPro = () => {
   const getCumulativeTime = (index) => items.slice(0, index + 1).reduce((sum, item) => sum + item.duration, 0);
   const totalDuration = items.reduce((sum, item) => sum + item.duration, 0);
 
+  // Format date to DD-MM-YYYY
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
   // Timer effect - Accurate timing
   useEffect(() => {
     let startTime = null;
@@ -636,7 +645,7 @@ const RadioRundownPro = () => {
         // Genereer content voor dit rundown
         let content = 'RADIO DRAAIBOEK\n================\n\n';
         content += 'Draaiboek: ' + rundown.name + '\n';
-        content += 'Datum: ' + rundown.date + '\n';
+        content += 'Datum: ' + formatDate(rundown.date) + '\n';
         content += 'Totale duur: ' + formatTime(rundownTotalDuration) + '\n';
         content += 'Geëxporteerd: ' + new Date().toLocaleString('nl-NL') + '\n\n================\n\n';
         
@@ -842,7 +851,7 @@ const RadioRundownPro = () => {
               onClick={() => setShowClock(!showClock)} 
               className={`${t.button} px-4 py-2 rounded-lg flex items-center gap-2 text-sm`}
             >
-              🕐 {showClock ? 'Verberg Klok' : 'Toon Klok'}
+              🕐 {showClock ? 'Verberg klok' : 'Toon klok'}
             </button>
             <button 
               onClick={() => window.open('/clock.html', '_blank')} 
@@ -914,14 +923,14 @@ const RadioRundownPro = () => {
         {showRundownSelector && (
           <div className={`${t.card} rounded-lg p-4 mb-6 shadow border ${t.border}`}>
             <div className="flex justify-between items-center mb-3">
-              <h3 className={`font-bold ${t.text}`}>Mijn Draaiboeken</h3>
+              <h3 className={`font-bold ${t.text}`}>Mijn draaiboeken</h3>
               <button 
                 onClick={downloadAllRundowns}
                 className={`${t.button} px-3 py-1 rounded-lg text-sm flex items-center gap-2`}
                 title="Download alle draaiboeken als TXT bestanden"
               >
                 <Download size={16} />
-                Download Alle
+                Download alle
               </button>
             </div>
             <div className="space-y-2">
@@ -935,7 +944,7 @@ const RadioRundownPro = () => {
                     className="flex-1 text-left"
                   >
                     <div className={`font-medium ${t.text}`}>{rb.name}</div>
-                    <div className={`text-sm ${t.textSecondary}`}>{rb.date}</div>
+                    <div className={`text-sm ${t.textSecondary}`}>{formatDate(rb.date)}</div>
                   </button>
                   <div className="flex gap-2">
                     <button 

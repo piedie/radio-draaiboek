@@ -129,8 +129,37 @@ const RadioRundownPro = () => {
   };
 
   const loadRunbookItems = async (runbookId) => {
-    const { data } = await supabase.from('items').select('*').eq('runbook_id', runbookId).order('position');
-    if (data) setItems(data);
+    console.log('🔄 Loading items for runbook:', runbookId);
+    const { data, error } = await supabase
+      .from('items')
+      .select('id, type, title, artist, notes, first_words, last_words, duration, position, color, connection_type, phone_number, spotify_track_id, spotify_preview_url, audio_url, has_scoreboard, user_item_type_id')
+      .eq('runbook_id', runbookId)
+      .order('position');
+    
+    if (error) {
+      console.error('❌ Error loading items:', error);
+      return;
+    }
+    
+    console.log('📋 Raw items from database:', data);
+    
+    if (data) {
+      console.log('📋 Setting items state:', data.length, 'items');
+      data.forEach((item, index) => {
+        console.log(`📋 Item ${index + 1}:`, {
+          id: item.id,
+          type: item.type,
+          title: item.title,
+          artist: item.artist,
+          notes: item.notes ? 'HAS_NOTES' : 'NO_NOTES',
+          first_words: item.first_words ? 'HAS_FIRST_WORDS' : 'NO_FIRST_WORDS'
+        });
+      });
+      setItems(data);
+    } else {
+      console.log('📋 No items found for runbook');
+      setItems([]);
+    }
   };
 
   useEffect(() => {
@@ -186,7 +215,7 @@ const RadioRundownPro = () => {
         // Haal alle items op van origineel runbook
         const { data: originalItems, error: itemsError } = await supabase
           .from('items')
-          .select('*')
+          .select('id, type, title, artist, notes, first_words, last_words, duration, position, color, connection_type, phone_number, spotify_track_id, spotify_preview_url, audio_url, has_scoreboard, user_item_type_id')
           .eq('runbook_id', runbookId)
           .order('position');
         
@@ -1333,7 +1362,14 @@ const RadioRundownPro = () => {
               © {COPYRIGHT_YEAR} Landstede MBO. Alle rechten voorbehouden.
             </div>
             <div className="flex items-center gap-4">
-              {/* Debug knop - alleen in development */}
+              {/* Debug knoppen - alleen in development */}
+              <button 
+                onClick={debugCurrentItems}
+                className={`text-xs px-2 py-1 rounded ${t.buttonSecondary} opacity-50 hover:opacity-100`}
+                title="Debug huidige items"
+              >
+                🔍 Debug Items
+              </button>
               <button 
                 onClick={testCopyFunction}
                 className={`text-xs px-2 py-1 rounded ${t.buttonSecondary} opacity-50 hover:opacity-100`}
@@ -1415,3 +1451,58 @@ const RadioRundownPro = () => {
 };
 
 export default RadioRundownPro;
+
+// Debug functie om items te inspecteren
+  const debugCurrentItems = async () => {
+    if (!currentRundownId) {
+      console.log('❌ No current rundown selected');
+      return;
+    }
+    
+    console.log('🔍 Debugging items for runbook:', currentRundownId);
+    
+    // Haal direct uit database
+    const { data: dbItems, error } = await supabase
+      .from('items')
+      .select('*')
+      .eq('runbook_id', currentRundownId)
+      .order('position');
+    
+    console.log('📊 Raw database items:', dbItems);
+    console.log('📊 Current state items:', items);
+    
+    if (dbItems) {
+      dbItems.forEach((item, index) => {
+        console.log(`Item ${index + 1}:`, {
+          id: item.id,
+          type: item.type,
+          title: item.title,
+          artist: item.artist,
+          notes: item.notes,
+          first_words: item.first_words,
+          last_words: item.last_words,
+          duration: item.duration,
+          position: item.position
+        });
+      });
+    }
+    
+    if (error) {
+      console.error('❌ Error fetching debug items:', error);
+    }
+  };
+
+  // Monitor items state changes
+  useEffect(() => {
+    console.log('🔄 Items state changed:', items.length, 'items');
+    if (items.length > 0) {
+      console.log('📋 First item sample:', {
+        id: items[0].id,
+        type: items[0].type,
+        title: items[0].title,
+        artist: items[0].artist,
+        notes: items[0].notes ? 'HAS_NOTES' : 'NO_NOTES',
+        first_words: items[0].first_words ? 'HAS_FIRST_WORDS' : 'NO_FIRST_WORDS'
+      });
+    }
+  }, [items]);

@@ -155,18 +155,87 @@ const RadioRundownPro = () => {
   };
 
   const duplicateRunbook = async (runbookId) => {
+    console.log('🔄 Duplicating runbook:', runbookId);
     const original = rundowns.find(r => r.id === runbookId);
-    if (!original) return;
-    const { data: newRunbook } = await supabase.from('runbooks').insert([{
-      user_id: currentUser.id, name: original.name + ' (kopie)', date: new Date().toISOString().split('T')[0]
-    }]).select();
-    if (newRunbook) {
-      const { data: originalItems } = await supabase.from('items').select('*').eq('runbook_id', runbookId);
-      if (originalItems && originalItems.length > 0) {
-        const itemsCopy = originalItems.map(item => ({ ...item, id: undefined, runbook_id: newRunbook[0].id }));
-        await supabase.from('items').insert(itemsCopy);
+    if (!original) {
+      console.error('❌ Original runbook not found');
+      return;
+    }
+    
+    try {
+      // Maak nieuwe runbook
+      const { data: newRunbook, error: runbookError } = await supabase.from('runbooks').insert([{
+        user_id: currentUser.id, 
+        name: original.name + ' (kopie)', 
+        date: new Date().toISOString().split('T')[0]
+      }]).select();
+      
+      if (runbookError) throw runbookError;
+      console.log('✅ New runbook created:', newRunbook[0].id);
+      
+      if (newRunbook && newRunbook.length > 0) {
+        // Haal alle items op van origineel runbook
+        const { data: originalItems, error: itemsError } = await supabase
+          .from('items')
+          .select('*')
+          .eq('runbook_id', runbookId)
+          .order('position');
+        
+        if (itemsError) {
+          console.error('❌ Error fetching original items:', itemsError);
+          throw itemsError;
+        }
+        
+        console.log('📋 Found items to copy:', originalItems?.length || 0);
+        console.log('📋 Original items:', originalItems);
+        
+        if (originalItems && originalItems.length > 0) {
+          // Kopieer items met correcte positie
+          const itemsCopy = originalItems.map((item, index) => {
+            const newItem = { ...item };
+            delete newItem.id; // Remove original ID
+            delete newItem.created_at; // Remove original timestamp
+            delete newItem.updated_at; // Remove original timestamp
+            newItem.runbook_id = newRunbook[0].id;
+            newItem.position = index; // Ensure correct position
+            console.log(`📋 Copying item ${index + 1}:`, {
+              type: newItem.type,
+              title: newItem.title,
+              position: newItem.position,
+              runbook_id: newItem.runbook_id
+            });
+            return newItem;
+          });
+          
+          console.log('📋 Items to insert:', itemsCopy.length);
+          const { data: insertedItems, error: insertError } = await supabase
+            .from('items')
+            .insert(itemsCopy)
+            .select();
+          
+          if (insertError) {
+            console.error('❌ Error inserting items:', insertError);
+            throw insertError;
+          }
+          
+          console.log('✅ Items copied successfully:', insertedItems?.length || 0);
+        }
+        
+        // Update de rundowns lijst
+        setRundowns([newRunbook[0], ...rundowns]);
+        setCurrentRundownId(newRunbook[0].id); // Switch to new runbook
+        
+        // Laad items voor display (met kleine delay voor database consistency)
+        setTimeout(() => {
+          loadRunbookItems(newRunbook[0].id);
+        }, 100);
+        
+        console.log('🎉 Runbook duplicated successfully');
+        alert(`Draaiboek "${original.name}" succesvol gekopieerd!`);
       }
-      setRundowns([newRunbook[0], ...rundowns]);
+    } catch (error) {
+      console.error('❌ Error duplicating runbook:', error);
+      alert('Fout bij kopiëren van draaiboek: ' + error.message);
     }
   };
 
@@ -262,6 +331,28 @@ const RadioRundownPro = () => {
       console.error('❌ Feedback table test error:', error);
       return false;
     }
+  };
+
+  // Test copy functionality
+  const testCopyFunction = async () => {
+    if (!currentRundownId) {
+      alert('Geen runbook geselecteerd');
+      return;
+    }
+    
+    console.log('🧪 Testing copy function for runbook:', currentRundownId);
+    
+    // Check current items
+    const { data: currentItems } = await supabase
+      .from('items')
+      .select('*')
+      .eq('runbook_id', currentRundownId)
+      .order('position');
+    
+    console.log('📋 Current items in runbook:', currentItems?.length || 0, currentItems);
+    
+    // Trigger copy
+    await duplicateRunbook(currentRundownId);
   };
 
   const deleteItem = async (id) => {
@@ -912,6 +1003,14 @@ const RadioRundownPro = () => {
               © {COPYRIGHT_YEAR} Landstede MBO. Alle rechten voorbehouden.
             </div>
             <div className="flex items-center gap-4">
+              {/* Debug knop - alleen in development */}
+              <button 
+                onClick={testCopyFunction}
+                className={`text-xs px-2 py-1 rounded ${t.buttonSecondary} opacity-50 hover:opacity-100`}
+                title="Test kopiëerfunctie"
+              >
+                🧪 Test Copy
+              </button>
               <div className={`text-sm ${t.textSecondary}`}>
                 Radio Rundown Pro v{APP_VERSION}
               </div>

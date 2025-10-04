@@ -125,13 +125,44 @@ const RadioRundownPro = () => {
   };
 
   const loadRunbookItems = async (runbookId) => {
-    const { data } = await supabase.from('items').select('*').eq('runbook_id', runbookId).order('position');
+    console.log('🔄 Loading items for runbook:', runbookId);
+    const { data, error } = await supabase.from('items').select('*').eq('runbook_id', runbookId).order('position');
+    if (error) {
+      console.error('❌ Error loading items:', error);
+      return;
+    }
+    console.log('📋 Loaded items:', data?.length || 0);
+    if (data && data.length > 0) {
+      console.log('📋 First item sample:', {
+        id: data[0].id,
+        type: data[0].type,
+        title: data[0].title,
+        artist: data[0].artist,
+        notes: data[0].notes ? 'HAS_NOTES' : 'NO_NOTES',
+        first_words: data[0].first_words ? 'HAS_FIRST_WORDS' : 'NO_FIRST_WORDS'
+      });
+    }
     if (data) setItems(data);
   };
 
   useEffect(() => {
     if (currentRundownId) loadRunbookItems(currentRundownId);
   }, [currentRundownId]);
+
+  // Monitor items state changes
+  useEffect(() => {
+    console.log('🔄 Items state changed:', items.length, 'items');
+    if (items.length > 0) {
+      console.log('📋 First item in state:', {
+        id: items[0].id,
+        type: items[0].type,
+        title: items[0].title,
+        artist: items[0].artist,
+        notes: items[0].notes ? 'HAS_NOTES' : 'NO_NOTES',
+        first_words: items[0].first_words ? 'HAS_FIRST_WORDS' : 'NO_FIRST_WORDS'
+      });
+    }
+  }, [items]);
 
   // Authentication handlers
   const handleLogin = async () => {
@@ -1243,13 +1274,20 @@ const RadioRundownPro = () => {
               © {COPYRIGHT_YEAR} Landstede MBO. Alle rechten voorbehouden.
             </div>
             <div className="flex items-center gap-4">
-              {/* Debug knop - alleen in development */}
+              {/* Debug knoppen - alleen in development */}
               <button 
                 onClick={testCopyFunction}
                 className={`text-xs px-2 py-1 rounded ${t.buttonSecondary} opacity-50 hover:opacity-100`}
                 title="Test kopiëerfunctie"
               >
                 🧪 Test Copy
+              </button>
+              <button 
+                onClick={testDatabaseItems}
+                className={`text-xs px-2 py-1 rounded ${t.buttonSecondary} opacity-50 hover:opacity-100`}
+                title="Test database items"
+              >
+                🔍 Test DB
               </button>
               <div className={`text-sm ${t.textSecondary}`}>
                 Radio Rundown Pro v{APP_VERSION}
@@ -1320,6 +1358,36 @@ const RadioRundownPro = () => {
           </div>
         </div>
       )}
+
+      {/* Test database items directly (debug functie) */}
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className={`${t.card} rounded-lg w-full max-w-md shadow-2xl`}>
+          <div className={`p-6 border-b ${t.border}`}>
+            <h3 className={`text-lg font-bold ${t.text}`}>🔍 Test Database Items</h3>
+          </div>
+          <div className="p-6">
+            <div className="mb-4">
+              <button 
+                onClick={testDatabaseItems}
+                className={`${t.button} w-full px-4 py-2 rounded-lg`}
+              >
+                Test Items in Huidig Draaiboek
+              </button>
+            </div>
+            <div className="text-sm text-center">
+              Opmerking: Deze functie is bedoeld voor ontwikkeldoeleinden. Wees voorzichtig met het uitvoeren van tests op productiegegevens.
+            </div>
+          </div>
+          <div className={`p-6 border-t flex gap-3 ${t.border}`}>
+            <button 
+              onClick={() => setShowJingleEditor(false)} 
+              className={`${t.buttonSecondary} flex-1 px-4 py-2 rounded-lg`}
+            >
+              Sluiten
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

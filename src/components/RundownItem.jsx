@@ -22,16 +22,16 @@ const RundownItem = ({
   const audioRef = useRef(null);
   const gameAudioRefs = useRef({});
   
-  // Scoreboard state - initialize with default scores if not present
+  // Scoreboard state - initialize with default scores if scoreboard is enabled
   const [scores, setScores] = useState(() => {
-    if (item.type === 'game' && item.scores) {
-      return item.scores;
+    if (item.type === 'game' && item.enable_scoreboard) {
+      return item.scores || [
+        { name: 'Speler 1', score: 0 },
+        { name: 'Speler 2', score: 0 },
+        { name: 'Speler 3', score: 0 }
+      ];
     }
-    return [
-      { name: 'Speler 1', score: 0 },
-      { name: 'Speler 2', score: 0 },
-      { name: 'Speler 3', score: 0 }
-    ];
+    return [];
   });
   const [editingPlayerName, setEditingPlayerName] = useState(null);
   
@@ -145,6 +145,8 @@ const RundownItem = ({
 
   // Scoreboard functions
   const updateScore = (playerIndex, delta) => {
+    if (!item.enable_scoreboard) return;
+    
     const newScores = [...scores];
     newScores[playerIndex].score = Math.max(0, newScores[playerIndex].score + delta);
     setScores(newScores);
@@ -157,6 +159,8 @@ const RundownItem = ({
   };
 
   const updatePlayerName = (playerIndex, newName) => {
+    if (!item.enable_scoreboard) return;
+    
     const newScores = [...scores];
     newScores[playerIndex].name = newName || `Speler ${playerIndex + 1}`;
     setScores(newScores);
@@ -170,6 +174,8 @@ const RundownItem = ({
   };
 
   const resetAllScores = () => {
+    if (!item.enable_scoreboard) return;
+    
     const newScores = scores.map(player => ({ ...player, score: 0 }));
     setScores(newScores);
   };
@@ -328,8 +334,8 @@ const RundownItem = ({
               </div>
             )}
             
-            {/* Scoreboard for game items */}
-            {item.type === 'game' && (
+            {/* Scoreboard for game items - only if enabled */}
+            {item.type === 'game' && item.enable_scoreboard && (
               <div className="mb-3">
                 <div className={`flex items-center justify-between mb-2`}>
                   <div className={`text-xs font-semibold ${t.textSecondary} flex items-center`}>

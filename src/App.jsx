@@ -201,23 +201,66 @@ const RadioRundownPro = () => {
   const submitFeedback = async () => {
     if (!feedback.trim()) return;
     
+    console.log('🔄 Submitting feedback:', {
+      user_id: currentUser?.id,
+      user_email: currentUser?.email,
+      type: feedbackType,
+      message: feedback.trim().substring(0, 50) + '...'
+    });
+    
     try {
-      const { error } = await supabase.from('feedback').insert([{
+      const { data, error } = await supabase.from('feedback').insert([{
         user_id: currentUser.id,
         user_email: currentUser.email,
         type: feedbackType,
-        message: feedback.trim(),
-        created_at: new Date().toISOString()
-      }]);
+        message: feedback.trim()
+      }]).select();
       
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Supabase error:', error);
+        throw error;
+      }
       
+      console.log('✅ Feedback saved:', data);
       setFeedback('');
       setShowFeedbackModal(false);
       alert('Bedankt voor je feedback! 🙏');
     } catch (error) {
-      console.error('Feedback error:', error);
-      alert('Er ging iets mis bij het versturen van feedback.');
+      console.error('❌ Feedback error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      
+      // Meer specifieke error messages
+      let errorMsg = 'Er ging iets mis bij het versturen van feedback.';
+      if (error.message?.includes('permission')) {
+        errorMsg = 'Geen toegang om feedback te versturen. Controleer je login status.';
+      } else if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+        errorMsg = 'Feedback tabel bestaat niet. Database migratie nodig.';
+      }
+      
+      alert(errorMsg + '\n\nDetails: ' + error.message);
+    }
+  };
+
+  // Test feedback table (debug functie)
+  const testFeedbackTable = async () => {
+    try {
+      console.log('🔍 Testing feedback table...');
+      const { data, error } = await supabase.from('feedback').select('id').limit(1);
+      
+      if (error) {
+        console.error('❌ Feedback table test failed:', error);
+        return false;
+      }
+      
+      console.log('✅ Feedback table exists and accessible');
+      return true;
+    } catch (error) {
+      console.error('❌ Feedback table test error:', error);
+      return false;
     }
   };
 
@@ -854,6 +897,13 @@ const RadioRundownPro = () => {
             </div>
             
             <div className="flex gap-3 justify-end">
+              <button 
+                onClick={testFeedbackTable}
+                className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-xs`}
+                title="Test database verbinding"
+              >
+                🔍 Test
+              </button>
               <button 
                 onClick={() => {
                   setShowFeedbackModal(false);

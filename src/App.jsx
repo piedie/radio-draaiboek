@@ -769,6 +769,14 @@ const RadioRundownPro = () => {
     return (
       <div className={`${t.bg} min-h-screen flex items-center justify-center p-4`}>
         <div className={`${t.card} rounded-lg shadow-xl p-8 w-full max-w-md border ${t.border}`}>
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <img 
+              src="/logo.svg" 
+              alt="Radio Rundown Pro Logo" 
+              className="w-24 h-24"
+            />
+          </div>
           <h1 className={`${t.text} text-3xl font-bold mb-2 text-center`}>📻 Radio Rundown Pro</h1>
           <p className={`${t.textSecondary} text-center mb-8`}>Professioneel draaiboek beheer</p>
           <div className="space-y-4">
@@ -939,17 +947,8 @@ const RadioRundownPro = () => {
           
           {/* Quick add buttons */}
           <div className={`border-t pt-3 mb-2 ${t.border}`}>
-            <div className="flex items-center justify-between mb-2">
-              <div className={`text-sm font-semibold ${t.textSecondary}`}>ITEMS TOEVOEGEN:</div>
-              <button 
-                onClick={() => setShowItemTypeManager(true)}
-                className={`${t.buttonSecondary} px-3 py-2 rounded text-sm flex items-center`}
-                title="Item types beheren"
-              >
-                <Settings size={16} />
-              </button>
-            </div>
-            <div className="flex gap-2 flex-wrap">
+            <div className={`text-sm font-semibold mb-2 ${t.textSecondary}`}>ITEMS TOEVOEGEN:</div>
+            <div className="flex gap-2 flex-wrap items-center">
               {userItemTypes.slice(0, 8).map(itemType => {
                 console.log('🔄 Rendering quick-add button for:', itemType);
                 return (
@@ -973,6 +972,14 @@ const RadioRundownPro = () => {
                   + Meer...
                 </button>
               )}
+              {/* Tandwieltje aan het einde van de knoppenrij */}
+              <button 
+                onClick={() => setShowItemTypeManager(true)}
+                className={`${t.buttonSecondary} px-3 py-2 rounded text-sm flex items-center ml-auto`}
+                title="Item types beheren"
+              >
+                <Settings size={16} />
+              </button>
             </div>
           </div>
         </div>

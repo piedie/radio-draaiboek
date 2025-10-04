@@ -881,69 +881,660 @@ const RadioRundownPro = () => {
     
     return () => {
       if (liveTimeInterval) {
+      if (liveTimeInterval) {eInterval);
         clearInterval(liveTimeInterval);
-      }
-      if (dataRefreshInterval) {
+      }f (dataRefreshInterval) {
+      if (dataRefreshInterval) {hInterval);
         clearInterval(dataRefreshInterval);
       }
-    };
+    };showLiveTime, ntpOffset]);
   }, [showLiveTime, ntpOffset]);
-
+  // Verkeer data ophalen (NDW - Nationale Databank Wegverkeergegevens)
   // Verkeer data ophalen (NDW - Nationale Databank Wegverkeergegevens)
   const fetchTrafficData = async () => {
-    try {
-      // Voor nu gebruiken we realistische mock data
+    try {Voor nu gebruiken we realistische mock data
+      // Voor nu gebruiken we realistische mock datanformatie API of OpenTraffic gebruiken
       // In productie kun je NDW API, ANWB Verkeersinformatie API of OpenTraffic gebruiken
       const baseKm = 80 + Math.sin(Date.now() / 3600000) * 50; // Cyclische variatie
       const randomVariation = Math.random() * 40 - 20; // ±20 km variatie
       const totalKm = Math.max(0, Math.round(baseKm + randomVariation));
-      
       setTrafficData({ totalKm, loading: false });
+      setTrafficData({ totalKm, loading: false });lKm, 'km');
       console.log('🚗 Traffic data updated:', totalKm, 'km');
-    } catch (error) {
+    } catch (error) {Failed to fetch traffic data:', error);
       console.error('Failed to fetch traffic data:', error);
       setTrafficData({ totalKm: 0, loading: false });
     }
   };
-
+  // Nieuws data ophalen via Nu.nl RSS (via RSS2JSON proxy)
   // Nieuws data ophalen via Nu.nl RSS (via RSS2JSON proxy)
   const fetchNewsData = async () => {
-    try {
-      // Gebruik RSS2JSON API voor CORS-vriendelijke RSS parsing
+    try {Gebruik RSS2JSON API voor CORS-vriendelijke RSS parsing
+      // Gebruik RSS2JSON API voor CORS-vriendelijke RSS parsingapi.json?rss_url=https://www.nu.nl/rss/Algemeen');
       const response = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https://www.nu.nl/rss/Algemeen');
       const data = await response.json();
-      
       if (data.status === 'ok' && data.items) {
+      if (data.status === 'ok' && data.items) {).map(item => ({
         const headlines = data.items.slice(0, 3).map(item => ({
           title: item.title,
-          link: item.link,
+          link: item.link,bDate
           pubDate: item.pubDate
-        }));
+        }));ewsData({ headlines, loading: false });
         setNewsData({ headlines, loading: false });
-      } else {
+      } else {new Error('Invalid RSS response');
         throw new Error('Invalid RSS response');
-      }
-    } catch (error) {
+      }atch (error) {
+    } catch (error) {Failed to fetch news data:', error);
       console.error('Failed to fetch news data:', error);
       // Fallback mock data
       setNewsData({ 
-        headlines: [
+        headlines: [Nieuws laden...', link: '#', pubDate: new Date().toISOString() }
           { title: 'Nieuws laden...', link: '#', pubDate: new Date().toISOString() }
-        ], 
+        ], ding: false 
         loading: false 
       });
     }
   };
+  // Login screen
+  // Monitor items state changes{
+  useEffect(() => {
+    console.log('🔄 Items state changed:', items.length, 'items');lassName={`${t.bg} min-h-screen flex items-center justify-center p-4`}>
+    if (items.length > 0) {${t.border}`}>
+      console.log('📋 First item sample:', {
+        id: items[0].id,me="flex justify-center mb-6">
+        type: items[0].type,
+        title: items[0].title,="/logo.svg" 
+        artist: items[0].artist,wn Pro Logo" 
+        notes: items[0].notes ? 'HAS_NOTES' : 'NO_NOTES',
+        first_words: items[0].first_words ? 'HAS_FIRST_WORDS' : 'NO_FIRST_WORDS'
+      });v>
+    }assName={`${t.text} text-3xl font-bold mb-2 text-center`}>📻 Radio Rundown Pro</h1>
+  }, [items]);
 
   // Login screen
   if (showLogin) {
-    return (
+    return (bel className={`block text-sm font-medium ${t.text} mb-1`}>Naam</label>
       <div className={`${t.bg} min-h-screen flex items-center justify-center p-4`}>
-        <div className={`${t.card} rounded-lg shadow-xl p-8 w-full max-w-md border ${t.border}`}>
-          {/* Logo */}
-          <div className="flex justify-center mb-6">
+        <div className={`${t.card} rounded-lg shadow-xl p-8 w-full max-w-md border ${t.border}`}>"text" 
+          {/* Logo */}Form.name} 
+          <div className="flex justify-center mb-6">inForm({...loginForm, name: e.target.value})} 
             <img 
               src="/logo.svg" 
+              alt="Radio Rundown Pro Logo" v>
+              className="w-24 h-24"
+            />iv>
+          </div>bel className={`block text-sm font-medium ${t.text} mb-1`}>Email</label>
+          <h1 className={`${t.text} text-3xl font-bold mb-2 text-center`}>📻 Radio Rundown Pro</h1>
+          <p className={`${t.textSecondary} text-center mb-8`}>Professioneel draaiboek beheer</p>"email" 
+          <div className="space-y-4">orm.email} 
+            {isRegistering && (nForm({...loginForm, email: e.target.value})} 
+              <div>
+                <label className={`block text-sm font-medium ${t.text} mb-1`}>Naam</label>
+                <input v>
+                  type="text" 
+                  value={loginForm.name} bel className={`block text-sm font-medium ${t.text} mb-1`}>Wachtwoord</label>
+                  onChange={(e) => setLoginForm({...loginForm, name: e.target.value})} 
+                  className={`w-full ${t.input} rounded px-3 py-2 border`} "password" 
+                />.password} 
+              </div>rm({...loginForm, password: e.target.value})} 
+            )}
+            <div>handleRegister() : handleLogin())} 
+              <label className={`block text-sm font-medium ${t.text} mb-1`}>Email</label>
+              <input v>
+                type="email" n 
+                value={loginForm.email} k={isRegistering ? handleRegister : handleLogin} 
+                onChange={(e) => setLoginForm({...loginForm, email: e.target.value})} t-medium`}
+                className={`w-full ${t.input} rounded px-3 py-2 border`} 
+              /> {isRegistering ? 'Account aanmaken' : 'Inloggen'}
+            </div>
+            <div>
+              <label className={`block text-sm font-medium ${t.text} mb-1`}>Wachtwoord</label>k={() => setIsRegistering(!isRegistering)} 
+              <input  rounded-lg font-medium`}
+                type="password" 
+                value={loginForm.password}  {isRegistering ? 'Al een account? Inloggen' : 'Nog geen account? Registreren'}
+                onChange={(e) => setLoginForm({...loginForm, password: e.target.value})} 
+                className={`w-full ${t.input} rounded px-3 py-2 border`} 
+                onKeyPress={(e) => e.key === 'Enter' && (isRegistering ? handleRegister() : handleLogin())} 
+              />{/* Login Footer */}
+            </div> pt-4 border-t border-gray-200 dark:border-gray-700 text-center">
+            <button 
+              onClick={isRegistering ? handleRegister : handleLogin} en voorbehouden.
+              className={`w-full ${t.button} px-4 py-3 rounded-lg font-medium`}
+            >lassName={`text-xs ${t.textSecondary} mt-1`}>
+              {isRegistering ? 'Account aanmaken' : 'Inloggen'}DATE}
+            </button>
+            <button 
+              onClick={() => setIsRegistering(!isRegistering)} 
+              className={`w-full ${t.buttonSecondary} px-4 py-3 rounded-lg font-medium`}
+            >
+              {isRegistering ? 'Al een account? Inloggen' : 'Nog geen account? Registreren'}
+            </button>
+          </div>  const currentRunbook = rundowns.find(r => r.id === currentRundownId);
+          
+          {/* Login Footer */}  return (
+          <div className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-700 text-center">lassName={`${t.bg} min-h-screen p-6`}>
+            <div className={`text-xs ${t.textSecondary}`}>
+              © {COPYRIGHT_YEAR} Landstede MBO. Alle rechten voorbehouden.
+            </div>={`${t.card} rounded-lg p-6 mb-6 shadow border ${t.border}`}>
+            <div className={`text-xs ${t.textSecondary} mt-1`}>
+              Radio Rundown Pro v{APP_VERSION} - Build: {BUILD_DATE}
+            </div>d ? (
+          </div>
+        </div>"text" 
+      </div>ntRunbook ? currentRunbook.name : ''} 
+    );.target.value)} 
+  }
+EditingRunbookName(null)} 
+  const currentRunbook = rundowns.find(r => r.id === currentRundownId);
+
+  return (
+    <div className={`${t.bg} min-h-screen p-6`}>(
+      <div className="max-w-7xl mx-auto"> 
+        {/* Header */}assName={`text-2xl font-bold cursor-pointer hover:underline ${t.text}`} 
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            {editingRunbookName === currentRundownId ? ( 📻 {currentRunbook ? currentRunbook.name : 'Draaiboek'}
+              <input 
+                type="text" 
+                value={rundowns.find(r => r.id === currentRundownId)?.name || ''} v>
+                onChange={(e) => {lassName="flex gap-3">
+                  const newName = e.target.value;
+                  setRundowns(rundowns.map(r => r.id === currentRundownId ? {...r, name: newName} : r));k={() => setTheme(theme === 'light' ? 'dark' : 'light')} 
+                }} 
+                onBlur={() => {
+                  const newName = rundowns.find(r => r.id === currentRundownId)?.name; {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+                  if (newName) renameRunbook(currentRundownId, newName);
+                  setEditingRunbookName(null);
+                }} k={() => setShowFeedbackModal(true)} 
+                onKeyPress={(e) => {text-white p-2 rounded-lg transition-colors"
+                  if (e.key === 'Enter') {
+                    const newName = rundowns.find(r => r.id === currentRundownId)?.name;
+                    if (newName) renameRunbook(currentRundownId, newName); <MessageSquare size={20} />
+                    setEditingRunbookName(null);
+                  }
+                }} k={handleLogout} 
+                className={`text-2xl font-bold bg-transparent border-b-2 border-blue-500 ${t.text}`} econdary} px-4 py-2 rounded-lg flex items-center gap-2`}
+                autoFocus 
+              /> <LogOut size={16} />
+            ) : (
+              <h1 
+                className={`text-2xl font-bold cursor-pointer hover:underline ${t.text}`} 
+                onClick={() => setEditingRunbookName(currentRundownId)}
+              >
+                📻 {currentRunbook ? currentRunbook.name : 'Draaiboek'}{/* Action buttons */}
+              </h1>ap-2 flex-wrap mb-3">
+            )}
+          </div>k={() => setShowRundownSelector(!showRundownSelector)} 
+          <div className="flex gap-3">r gap-2`}
+            <button 
+              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}  <FolderOpen size={16} />
+              className={`${t.buttonSecondary} p-2 rounded-lg`}
+            >
+              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+            </button>k={createNewRunbook} 
+            <button 4 py-2 rounded-lg flex items-center gap-2`}
+              onClick={() => setShowFeedbackModal(true)} 
+              className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg transition-colors" <Plus size={16} />
+              title="Feedback & Suggesties"
+            >n>
+              <MessageSquare size={20} />
+            </button>k={() => setShowClock(!showClock)} 
+            <button -lg flex items-center gap-2 text-sm`}
+              onClick={handleLogout} 
+              className={`${t.buttonSecondary} px-4 py-2 rounded-lg flex items-center gap-2`} 🕐 {showClock ? 'Verberg klok' : 'Toon klok'}
+            >
+              <LogOut size={16} />
+              {currentUser?.email}k={() => window.open('/clock.html', '_blank')} 
+            </button> text-sm`}
+          </div>
+        </div> 📺 Externe klok
+
+        <div className={`${t.card} rounded-lg p-6 shadow border ${t.border}`}>
+          <div className="flex justify-between items-center mb-6">k={() => setShowLiveTime(!showLiveTime)} 
+            <button r:bg-green-600 text-white' : t.buttonSecondary} px-3 py-2 rounded-lg text-sm transition-colors`}
+              onClick={() => setShowRundownSelector(!showRundownSelector)} 
+              className={`${t.buttonSecondary} px-4 py-2 rounded-lg flex items-center gap-2`}
+            > 🔴 Live
+              <FolderOpen size={16} />
+              Mijn draaiboeken
+            </button>k={() => setShowPrintModal(true)} 
+            <button -2 rounded-lg text-sm`}
+              onClick={createNewRunbook} 
+              className={`${t.button} px-4 py-2 rounded-lg flex items-center gap-2`} 🖨️ Print
+            >
+              <Plus size={16} />
+              Nieuwk={() => setExpandedItems(new Set(items.map(i => i.id)))} 
+            </button>
+            <button 
+              onClick={() => setShowClock(!showClock)}  ⬇️ Alles uit
+              className={`${t.button} px-4 py-2 rounded-lg flex items-center gap-2 text-sm`}
+            >
+              🕐 {showClock ? 'Verberg klok' : 'Toon klok'}k={() => setExpandedItems(new Set())} 
+            </button>ounded-lg text-sm`}
+            <button 
+              onClick={() => window.open('/clock.html', '_blank')}  ⬆️ Alles in
+              className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
+            >
+              📺 Externe klok
+            </button>{/* Quick add buttons */}
+            <button  pt-3 mb-2 ${t.border}`}>
+              onClick={() => setShowLiveTime(!showLiveTime)} textSecondary}`}>ITEMS TOEVOEGEN:</div>
+              className={`${showLiveTime ? 'bg-green-500 hover:bg-green-600 text-white' : t.buttonSecondary} px-3 py-2 rounded-lg text-sm transition-colors`}
+              title="Live atoomtijd weergave"
+            > for:', itemType);
+              🔴 Live
+            </button>n 
+            <button temType.name}
+              onClick={() => setShowPrintModal(true)} kAdd(itemType.name)} 
+              className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}-2 rounded text-sm`}
+            >
+              🖨️ Printeft: `3px solid ${itemType.color}`,
+            </button>
+            <button 
+              onClick={() => setExpandedItems(new Set(items.map(i => i.id)))}  {getItemTypeIcon(itemType.name)} {itemType.display_name}
+              className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
+            >
+              ⬇️ Alles uit
+            </button>erItemTypes.length > 8 && (
+            <button 
+              onClick={() => setExpandedItems(new Set())} k={() => setShowAddForm(true)}
+              className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}3 py-2 rounded text-sm`}
+            >
+              ⬆️ Alles in + Meer...
+            </button>
+          </div>
+          * Tandwieltje aan het einde van de knoppenrij */}
+          {/* Quick add buttons */}
+          <div className={`border-t pt-3 mb-2 ${t.border}`}>k={() => setShowItemTypeManager(true)}
+            <div className={`text-sm font-semibold mb-2 ${t.textSecondary}`}>ITEMS TOEVOEGEN:</div>ounded text-sm flex items-center ml-auto`}
+            <div className="flex gap-2 flex-wrap items-center">
+              {userItemTypes.slice(0, 8).map(itemType => {
+                console.log('🔄 Rendering quick-add button for:', itemType); <Settings size={16} />
+                return (
+                  <button 
+                    key={itemType.name}
+                    onClick={() => quickAdd(itemType.name)} 
+                    className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
+                    style={{         {/* Rundown selector */}
+                      borderLeft: `3px solid ${itemType.color}`,(
+                    }}rd} rounded-lg p-4 mb-6 shadow border ${t.border}`}>
+                  >
+                    {getItemTypeIcon(itemType.name)} {itemType.display_name}</h3>
+                  </button>
+                );k={downloadAllRundowns}
+              })}py-1 rounded-lg text-sm flex items-center gap-2`}
+              {userItemTypes.length > 8 && (
+                <button 
+                  onClick={() => setShowAddForm(true)} <Download size={16} />
+                  className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
+                >
+                  + Meer...
+                </button>lassName="space-y-2">
+              )}
+              {/* Tandwieltje aan het einde van de knoppenrij */}
+              <button ={rb.id} 
+                onClick={() => setShowItemTypeManager(true)}flex justify-between p-3 rounded ${rb.id === currentRundownId ? 'bg-blue-100 dark:bg-blue-900' : t.buttonSecondary}`}
+                className={`${t.buttonSecondary} px-3 py-2 rounded text-sm flex items-center ml-auto`}
+                title="Item types beheren" <button 
+              >k={() => { setCurrentRundownId(rb.id); setShowRundownSelector(false); }} 
+                <Settings size={16} />
+              </button>
+            </div> <div className={`font-medium ${t.text}`}>{rb.name}</div>
+          </div>e(rb.date)}</div>
+        </div>
+sName="flex gap-2">
+        {/* Rundown selector */}
+        {showRundownSelector && (k={() => duplicateRunbook(rb.id)} 
+          <div className={`${t.card} rounded-lg p-4 mb-6 shadow border ${t.border}`}>nded`}
+            <div className="flex justify-between items-center mb-3">
+              <h3 className={`font-bold ${t.text}`}>Mijn draaiboeken</h3> <Copy size={16} />
+              <button 
+                onClick={downloadAllRundowns}
+                className={`${t.button} px-3 py-1 rounded-lg text-sm flex items-center gap-2`}k={() => deleteRunbook(rb.id)} 
+                title="Download alle draaiboeken als TXT bestanden"rounded hover:bg-red-100`}
+              >
+                <Download size={16} /> <Trash2 size={16} />
+                Download alle
+              </button>
+            </div>
+            <div className="space-y-2">
+              {rundowns.map(rb => (>
+                <div 
+                  key={rb.id} 
+                  className={`flex justify-between p-3 rounded ${rb.id === currentRundownId ? 'bg-blue-100 dark:bg-blue-900' : t.buttonSecondary}`}
+                >        {/* Main content - dynamische layout */}
+                  <button ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
+                    onClick={() => { setCurrentRundownId(rb.id); setShowRundownSelector(false); }} 
+                    className="flex-1 text-left"
+                  > de rundown kolom als klok verborgen is */}
+                    <div className={`font-medium ${t.text}`}>{rb.name}</div>
+                    <div className={`text-sm ${t.textSecondary}`}>{formatDate(rb.date)}</div>
+                  </button>
+                  <div className="flex gap-2">eTime}
+                    <button cData}
+                      onClick={() => duplicateRunbook(rb.id)} 
+                      className={`${t.buttonSecondary} p-2 rounded`}
+                    >
+                      <Copy size={16} />
+                    </button>{/* Rundown list */}
+                    <button .card} rounded-lg p-6 shadow border ${t.border}`}>
+                      onClick={() => deleteRunbook(rb.id)} 
+                      className={`${t.buttonSecondary} p-2 rounded hover:bg-red-100`}
+                    >s}
+                      <Trash2 size={16} />={expandedItems}
+                    </button>
+                  </div>
+                </div>rt={formatTimeShort}
+              ))}
+            </div>umulativeTime}
+          </div>
+        )}
+
+        {/* Main content - dynamische layout */}DragStart}
+        <div className={`grid gap-6 ${showClock ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
+          {/* Linker kolom: Rundown met eventuele live tijd */}
+          <div className="space-y-6">
+            {/* Live dashboard binnen de rundown kolom als klok verborgen is */}v>
+            {showLiveTime && !showClock && (
+              <LiveDashboard 
+                theme={theme}          {/* Rechter kolom: Klok met eventuele live tijd */}
+                liveTime={liveTime}
+                trafficData={trafficData}e="space-y-6">
+                newsData={newsData} de klok kolom als klok zichtbaar is */}
+              />
+            )}
+            
+            {/* Rundown list */}eTime}
+            <div className={`${t.card} rounded-lg p-6 shadow border ${t.border}`}>cData}
+              <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>Rundown</h2>
+              <RundownList 
+                items={items}
+                expandedItems={expandedItems}
+                dragOverIndex={dragOverIndex}{/* Radio klok */}
+                theme={theme}{t.card} rounded-lg p-6 shadow border ${t.border}`}>
+                formatTimeShort={formatTimeShort}
+                formatTime={formatTime}
+                getCumulativeTime={getCumulativeTime}={items}
+                toggleExpanded={toggleExpanded}currentTime}
+                setEditingItem={setEditingItem}
+                deleteItem={deleteItem}aying}
+                handleDragStart={handleDragStart}
+                handleDragOver={handleDragOver}ormatTime}
+                handleDrop={handleDrop}TimeShort}
+              />
+            </div>v>
+          </div>
+
+          {/* Rechter kolom: Klok met eventuele live tijd */}v>
+          {showClock && (
+            <div className="space-y-6">        {/* Jingle editor modal */}
+              {/* Live dashboard binnen de klok kolom als klok zichtbaar is */}
+              {showLiveTime && (d inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <LiveDashboard 
+                  theme={theme}
+                  liveTime={liveTime}}`}>🔔 Jingles</h3>
+                  trafficData={trafficData}
+                  newsData={newsData}lassName="p-6">
+                />ce-y-2 mb-4">
+              )}
+              
+              {/* Radio klok */}ingle.id} 
+              <div className={`${t.card} rounded-lg p-6 shadow border ${t.border}`}> addJingle(jingle); setShowJingleEditor(false); }} 
+                <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>Klok</h2>ry} hover:bg-blue-100 dark:hover:bg-blue-900`}
+                <Clock 
+                  items={items} <div className={`font-medium ${t.text}`}>{jingle.title}</div>
+                  currentTime={currentTime}meShort(jingle.duration)}</div>
+                  isPlaying={isPlaying}
+                  setIsPlaying={setIsPlaying}
+                  theme={theme}>
+                  formatTime={formatTime}
+                  formatTimeShort={formatTimeShort}lassName={`p-6 border-t flex gap-3 ${t.border}`}>
+                />
+              </div>k={() => setShowJingleEditor(false)} 
+            </div>4 py-2 rounded-lg`}
+          )}
+        </div> Sluiten
+
+        {/* Jingle editor modal */}
+        {showJingleEditor && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className={`${t.card} rounded-lg w-full max-w-md shadow-2xl`}>
+              <div className={`p-6 border-b ${t.border}`}>
+                <h3 className={`text-lg font-bold ${t.text}`}>🔔 Jingles</h3>        {/* Print modal */}
+              </div>(
+              <div className="p-6">xed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="space-y-2 mb-4">
+                  {jingles.map(jingle => (</h3>
+                    <button 
+                      key={jingle.id} 
+                      onClick={() => { addJingle(jingle); setShowJingleEditor(false); }} bel className="flex items-center mb-2">
+                      className={`w-full text-left px-4 py-3 rounded-lg ${t.buttonSecondary} hover:bg-blue-100 dark:hover:bg-blue-900`}
+                    >"radio" 
+                      <div className={`font-medium ${t.text}`}>{jingle.title}</div>tMode === 'rundown'} 
+                      <div className={`text-xs ${t.textSecondary}`}>Duur: {formatTimeShort(jingle.duration)}</div>own')} 
+                    </button>
+                  ))}
+                </div>pan className={t.text}>Rundown (kort)</span>
+              </div>
+              <div className={`p-6 border-t flex gap-3 ${t.border}`}>lassName="flex items-center">
+                <button 
+                  onClick={() => setShowJingleEditor(false)} "radio" 
+                  className={`${t.buttonSecondary} flex-1 px-4 py-2 rounded-lg`}tMode === 'full'} 
+                >ull')} 
+                  Sluiten
+                </button>
+              </div>pan className={t.text}>Volledig draaiboek</span>
+            </div>
+          </div>
+        )}lassName="flex gap-2">
+
+        {/* Print modal */}k={printRundown} 
+        {showPrintModal && ( px-4 py-2 rounded flex-1`}
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className={`${t.card} p-6 rounded-lg shadow-xl max-w-md w-full mx-4`}> 📄 Download TXT
+              <h3 className={`text-lg font-bold mb-4 ${t.text}`}>Printen</h3>
+              <div className="space-y-3 mb-6">
+                <label className="flex items-center">k={() => setShowPrintModal(false)} 
+                  <input 2 rounded flex-1`}
+                    type="radio" 
+                    name="printMode"  Annuleren
+                    checked={printMode === 'rundown'} 
+                    onChange={() => setPrintMode('rundown')} 
+                    className="mr-2" 
+                  />
+                  <span className={t.text}>Rundown (kort)</span>
+                </label>
+                <label className="flex items-center">v>
+                  <input 
+                    type="radio"       {/* Forms */}
+                    name="printMode" && (
+                    checked={printMode === 'full'} 
+                    onChange={() => setPrintMode('full')} addItem} 
+                    className="mr-2" etShowAddForm(false)}
+                  />
+                  <span className={t.text}>Volledig draaiboek</span>rt={formatTimeShort}
+                </label>
+              </div>Spotify}
+              <div className="flex gap-3">otify}
+                <button 
+                  onClick={printRundown} 
+                  className={`${t.button} flex-1 px-4 py-2 rounded-lg`}
+                >{editingItem && (
+                  Download
+                </button>itingItem} 
+                <button > updateItem(editingItem.id, updated)} 
+                  onClick={() => setShowPrintModal(false)} 
+                  className={`${t.buttonSecondary} flex-1 px-4 py-2 rounded-lg`}
+                >rt={formatTimeShort}
+                  Annuleren
+                </button>Spotify}
+              </div>otify}
+            </div>
+          </div>
+        )}
+      </div>      {/* Item Type Manager */}
+
+      {/* Footer */}
+      <footer className={`mt-8 py-4 border-t ${t.border}`}>urrentUser}
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-2">> setShowItemTypeManager(false)}
+            <div className={`text-sm ${t.textSecondary}`}>
+              © {COPYRIGHT_YEAR} Landstede MBO. Alle rechten voorbehouden.
+            </div>
+            <div className="flex items-center gap-4">
+              {/* Debug knoppen - alleen in development */}      {/* Footer */}
+              <button ame={`mt-8 py-4 border-t ${t.border}`}>
+                onClick={debugCurrentItems}
+                className={`text-xs px-2 py-1 rounded ${t.buttonSecondary} opacity-50 hover:opacity-100`}row justify-between items-center gap-2">
+                title="Debug huidige items"
+              >en voorbehouden.
+                🔍 Debug Items
+              </button>lassName="flex items-center gap-4">
+              <button nt */}
+                onClick={testCopyFunction}
+                className={`text-xs px-2 py-1 rounded ${t.buttonSecondary} opacity-50 hover:opacity-100`}k={debugCurrentItems}
+                title="Test kopiëerfunctie"-1 rounded ${t.buttonSecondary} opacity-50 hover:opacity-100`}
+              >
+                🧪 Test Copy
+              </button> 🔍 Debug Items
+              <div className={`text-sm ${t.textSecondary}`}>
+                Radio Rundown Pro v{APP_VERSION}
+              </div>k={testCopyFunction}
+              <div className={`text-xs ${t.textSecondary}`}>y-1 rounded ${t.buttonSecondary} opacity-50 hover:opacity-100`}
+                Build: {BUILD_DATE}
+              </div>
+            </div> 🧪 Test Copy
+          </div>
+        </div>sName={`text-sm ${t.textSecondary}`}>
+      </footer>
+      
+      {/* Feedback Modal */}lassName={`text-xs ${t.textSecondary}`}>
+      {showFeedbackModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className={`${t.card} p-6 rounded-lg shadow-xl max-w-md w-full mx-4`}>
+            <h3 className={`text-lg font-bold mb-4 ${t.text}`}>💬 Feedback & Suggesties</h3>
+            
+            <div className="mb-4">>
+              <label className={`block text-sm mb-2 ${t.text}`}>Type feedback:</label>
+              <select {/* Feedback Modal */}
+                value={feedbackType} (
+                onChange={(e) => setFeedbackType(e.target.value)} inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                className={`w-full px-3 py-2 rounded border ${t.input}`}
+              >/h2>
+                <option value="suggestion">💡 Suggestie</option>
+                <option value="bug">🐛 Bug report</option><div className="mb-4">
+                <option value="feature">🚀 Feature request</option>lock text-sm mb-2 ${t.text}`}>Type feedback:</label>
+                <option value="other">💬 Overig</option>
+              </select>{feedbackType} 
+            </div>eedbackType(e.target.value)}
+            nput}`}
+            <div className="mb-4">
+              <label className={`block text-sm mb-2 ${t.text}`}>Je bericht:</label> <option value="suggestion">💡 Suggestie</option>
+              <textarea 
+                value={feedback} </option>
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="Beschrijf je feedback, suggestie of probleem..."
+                className={`w-full px-3 py-2 rounded border h-32 ${t.input}`}
+              />
+            </div><div className="mb-4">
+            lock text-sm mb-2 ${t.text}`}>Je bericht:</label>
+            <div className="flex gap-3 justify-end">
+              <button eedback} 
+                onClick={testFeedbackTable}setFeedback(e.target.value)}
+                className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-xs`} of probleem..."
+                title="Test database verbinding"
+              >
+                🔍 Testv>
+              </button>
+              <button <div className="flex gap-3 justify-end">
+                onClick={() => {
+                  setShowFeedbackModal(false);k={testFeedbackTable}
+                  setFeedback('');dary} px-3 py-2 rounded-lg text-xs`}
+                }}
+                className={`${t.buttonSecondary} px-4 py-2 rounded-lg`}
+              > 🔍 Test
+                Annuleren
+              </button>
+              <button k={() => {
+                onClick={submitFeedback}kModal(false);
+                disabled={!feedback.trim()}
+                className={`${t.button} px-4 py-2 rounded-lg disabled:opacity-50`}
+              >assName={`${t.buttonSecondary} px-4 py-2 rounded-lg`}
+                Versturen
+              </button> Annuleren
+            </div>
+          </div>
+        </div>k={submitFeedback}
+      )}()}
+    </div>4 py-2 rounded-lg disabled:opacity-50`}
+  );
+}; Versturen
+
+export default RadioRundownPro;
+
+// Debug functie om items te inspecteren
+  const debugCurrentItems = async () => {
+    if (!currentRundownId) {v>
+      console.log('❌ No current rundown selected');
+      return;
+    }
+    export default RadioRundownPro;
+    console.log('🔍 Debugging items for runbook:', currentRundownId);
+    // Debug functie om items te inspecteren
+    // Haal direct uit database{
+    const { data: dbItems, error } = await supabase
+      .from('items')ent rundown selected');
+      .select('*')
+      .eq('runbook_id', currentRundownId)
+      .order('position');
+    console.log('🔍 Debugging items for runbook:', currentRundownId);
+    console.log('📊 Raw database items:', dbItems);
+    console.log('📊 Current state items:', items);// Haal direct uit database
+    r } = await supabase
+    if (dbItems) {
+      dbItems.forEach((item, index) => {
+        console.log(`Item ${index + 1}:`, {_id', currentRundownId)
+          id: item.id,
+          type: item.type,
+          title: item.title,console.log('📊 Raw database items:', dbItems);
+          artist: item.artist,
+          notes: item.notes,
+          first_words: item.first_words,if (dbItems) {
+          last_words: item.last_words,ach((item, index) => {
+          duration: item.duration,, {
+          position: item.position
+        });ype,
+      });e,
+    }t,
+    
+    if (error) {first_words,
+      console.error('❌ Error fetching debug items:', error);
+    }
+  };
+
+  // Monitor items state changes
+  useEffect(() => {
+    console.log('🔄 Items state changed:', items.length, 'items');
+    if (items.length > 0) {if (error) {
+      console.log('📋 First item sample:', {ror('❌ Error fetching debug items:', error);
+        id: items[0].id,
+        type: items[0].type,
+        title: items[0].title,
+        artist: items[0].artist,  // Monitor items state changes
+        notes: items[0].notes ? 'HAS_NOTES' : 'NO_NOTES',
+        first_words: items[0].first_words ? 'HAS_FIRST_WORDS' : 'NO_FIRST_WORDS' Items state changed:', items.length, 'items');
+      });
+    } item sample:', {
+  }, [items]);
+ype,
+  // Login screene,
+  if (showLogin) {t,
+    return ('HAS_NOTES' : 'NO_NOTES',
+      <div className={`${t.bg} min-h-screen flex items-center justify-center p-4`}>RDS' : 'NO_FIRST_WORDS'
+        <div className={`${t.card} rounded-lg shadow-xl p-8 w-full max-w-md border ${t.border}`}>
+          {/* Logo */}
+          <div className="flex justify-center mb-6">[items]);
+            <img               src="/logo.svg" 
               alt="Radio Rundown Pro Logo" 
               className="w-24 h-24"
             />
@@ -1001,7 +1592,7 @@ const RadioRundownPro = () => {
               © {COPYRIGHT_YEAR} Landstede MBO. Alle rechten voorbehouden.
             </div>
             <div className={`text-xs ${t.textSecondary} mt-1`}>
-              Radio Rundown Pro v{APP_VERSION} • Build: {BUILD_DATE}
+              Radio Rundown Pro v{APP_VERSION} - Build: {BUILD_DATE}
             </div>
           </div>
         </div>
@@ -1015,60 +1606,72 @@ const RadioRundownPro = () => {
     <div className={`${t.bg} min-h-screen p-6`}>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className={`${t.card} rounded-lg p-6 mb-6 shadow border ${t.border}`}>
-          <div className="flex justify-between mb-4">
-            <div className="flex items-center gap-4">
-              {editingRunbookName === currentRundownId ? (
-                <input 
-                  type="text" 
-                  value={currentRunbook ? currentRunbook.name : ''} 
-                  onChange={(e) => renameRunbook(currentRundownId, e.target.value)} 
-                  onBlur={() => setEditingRunbookName(null)} 
-                  onKeyPress={(e) => e.key === 'Enter' && setEditingRunbookName(null)} 
-                  className={`text-2xl font-bold px-2 py-1 rounded border ${t.input}`} 
-                  autoFocus 
-                />
-              ) : (
-                <h1 
-                  className={`text-2xl font-bold cursor-pointer hover:underline ${t.text}`} 
-                  onClick={() => setEditingRunbookName(currentRundownId)}
-                >
-                  📻 {currentRunbook ? currentRunbook.name : 'Draaiboek'}
-                </h1>
-              )}
-            </div>
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} 
-                className={`${t.buttonSecondary} p-2 rounded-lg`}
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            {editingRunbookName === currentRundownId ? (
+              <input 
+                type="text" 
+                value={rundowns.find(r => r.id === currentRundownId)?.name || ''} 
+                onChange={(e) => {
+                  const newName = e.target.value;
+                  setRundowns(rundowns.map(r => r.id === currentRundownId ? {...r, name: newName} : r));
+                }} 
+                onBlur={() => {
+                  const newName = rundowns.find(r => r.id === currentRundownId)?.name;
+                  if (newName) renameRunbook(currentRundownId, newName);
+                  setEditingRunbookName(null);
+                }} 
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    const newName = rundowns.find(r => r.id === currentRundownId)?.name;
+                    if (newName) renameRunbook(currentRundownId, newName);
+                    setEditingRunbookName(null);
+                  }
+                }} 
+                className={`text-2xl font-bold bg-transparent border-b-2 border-blue-500 ${t.text}`} 
+                autoFocus 
+              />
+            ) : (
+              <h1 
+                className={`text-2xl font-bold cursor-pointer hover:underline ${t.text}`} 
+                onClick={() => setEditingRunbookName(currentRundownId)}
               >
-                {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-              </button>
-              <button 
-                onClick={() => setShowFeedbackModal(true)} 
-                className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg transition-colors"
-                title="Feedback & Suggesties"
-              >
-                <MessageSquare size={20} />
-              </button>
-              <button 
-                onClick={handleLogout} 
-                className={`${t.buttonSecondary} px-4 py-2 rounded-lg flex items-center gap-2`}
-              >
-                <LogOut size={16} />
-                {currentUser?.email}
-              </button>
-            </div>
+                📻 {currentRunbook ? currentRunbook.name : 'Draaiboek'}
+              </h1>
+            )}
           </div>
-          
-          {/* Action buttons */}
-          <div className="flex gap-2 flex-wrap mb-3">
+          <div className="flex gap-3">
+            <button 
+              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} 
+              className={`${t.buttonSecondary} p-2 rounded-lg`}
+            >
+              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+            </button>
+            <button 
+              onClick={() => setShowFeedbackModal(true)} 
+              className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg transition-colors"
+              title="Feedback & Suggesties"
+            >
+              <MessageSquare size={20} />
+            </button>
+            <button 
+              onClick={handleLogout} 
+              className={`${t.buttonSecondary} px-4 py-2 rounded-lg flex items-center gap-2`}
+            >
+              <LogOut size={16} />
+              {currentUser?.email}
+            </button>
+          </div>
+        </div>
+
+        <div className={`${t.card} rounded-lg p-6 shadow border ${t.border}`}>
+          <div className="flex justify-between items-center mb-6">
             <button 
               onClick={() => setShowRundownSelector(!showRundownSelector)} 
-              className={`${t.button} px-4 py-2 rounded-lg flex items-center gap-2`}
+              className={`${t.buttonSecondary} px-4 py-2 rounded-lg flex items-center gap-2`}
             >
               <FolderOpen size={16} />
-              Draaiboeken
+              Mijn draaiboeken
             </button>
             <button 
               onClick={createNewRunbook} 
@@ -1169,368 +1772,3 @@ const RadioRundownPro = () => {
                 Download alle
               </button>
             </div>
-            <div className="space-y-2">
-              {rundowns.map(rb => (
-                <div 
-                  key={rb.id} 
-                  className={`flex justify-between p-3 rounded ${rb.id === currentRundownId ? 'bg-blue-100 dark:bg-blue-900' : t.buttonSecondary}`}
-                >
-                  <button 
-                    onClick={() => { setCurrentRundownId(rb.id); setShowRundownSelector(false); }} 
-                    className="flex-1 text-left"
-                  >
-                    <div className={`font-medium ${t.text}`}>{rb.name}</div>
-                    <div className={`text-sm ${t.textSecondary}`}>{formatDate(rb.date)}</div>
-                  </button>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => duplicateRunbook(rb.id)} 
-                      className={`${t.buttonSecondary} p-2 rounded`}
-                    >
-                      <Copy size={16} />
-                    </button>
-                    <button 
-                      onClick={() => deleteRunbook(rb.id)} 
-                      className={`${t.buttonSecondary} p-2 rounded hover:bg-red-100`}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Main content - dynamische layout */}
-        <div className={`grid gap-6 ${showClock ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
-          {/* Linker kolom: Rundown met eventuele live tijd */}
-          <div className="space-y-6">
-            {/* Live dashboard binnen de rundown kolom als klok verborgen is */}
-            {showLiveTime && !showClock && (
-              <LiveDashboard 
-                theme={theme}
-                liveTime={liveTime}
-                trafficData={trafficData}
-                newsData={newsData}
-              />
-            )}
-            
-            {/* Rundown list */}
-            <div className={`${t.card} rounded-lg p-6 shadow border ${t.border}`}>
-              <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>Rundown</h2>
-              <RundownList 
-                items={items}
-                expandedItems={expandedItems}
-                dragOverIndex={dragOverIndex}
-                theme={theme}
-                formatTimeShort={formatTimeShort}
-                formatTime={formatTime}
-                getCumulativeTime={getCumulativeTime}
-                toggleExpanded={toggleExpanded}
-                setEditingItem={setEditingItem}
-                deleteItem={deleteItem}
-                handleDragStart={handleDragStart}
-                handleDragOver={handleDragOver}
-                handleDrop={handleDrop}
-              />
-            </div>
-          </div>
-
-          {/* Rechter kolom: Klok met eventuele live tijd */}
-          {showClock && (
-            <div className="space-y-6">
-              {/* Live dashboard binnen de klok kolom als klok zichtbaar is */}
-              {showLiveTime && (
-                <LiveDashboard 
-                  theme={theme}
-                  liveTime={liveTime}
-                  trafficData={trafficData}
-                  newsData={newsData}
-                />
-              )}
-              
-              {/* Radio klok */}
-              <div className={`${t.card} rounded-lg p-6 shadow border ${t.border}`}>
-                <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>Klok</h2>
-                <Clock 
-                  items={items}
-                  currentTime={currentTime}
-                  isPlaying={isPlaying}
-                  setIsPlaying={setIsPlaying}
-                  theme={theme}
-                  formatTime={formatTime}
-                  formatTimeShort={formatTimeShort}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Jingle editor modal */}
-        {showJingleEditor && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className={`${t.card} rounded-lg w-full max-w-md shadow-2xl`}>
-              <div className={`p-6 border-b ${t.border}`}>
-                <h3 className={`text-lg font-bold ${t.text}`}>🔔 Jingles</h3>
-              </div>
-              <div className="p-6">
-                <div className="space-y-2 mb-4">
-                  {jingles.map(jingle => (
-                    <button 
-                      key={jingle.id} 
-                      onClick={() => { addJingle(jingle); setShowJingleEditor(false); }} 
-                      className={`w-full text-left px-4 py-3 rounded-lg ${t.buttonSecondary} hover:bg-blue-100 dark:hover:bg-blue-900`}
-                    >
-                      <div className={`font-medium ${t.text}`}>{jingle.title}</div>
-                      <div className={`text-xs ${t.textSecondary}`}>Duur: {formatTimeShort(jingle.duration)}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className={`p-6 border-t flex gap-3 ${t.border}`}>
-                <button 
-                  onClick={() => setShowJingleEditor(false)} 
-                  className={`${t.buttonSecondary} flex-1 px-4 py-2 rounded-lg`}
-                >
-                  Sluiten
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Print modal */}
-        {showPrintModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className={`${t.card} p-6 rounded-lg w-96 shadow-2xl`}>
-              <h3 className={`text-lg font-bold mb-4 ${t.text}`}>Printen</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="flex items-center mb-2">
-                    <input 
-                      type="radio" 
-                      checked={printMode === 'rundown'} 
-                      onChange={() => setPrintMode('rundown')} 
-                      className="mr-2" 
-                    />
-                    <span className={t.text}>Rundown (kort)</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input 
-                      type="radio" 
-                      checked={printMode === 'full'} 
-                      onChange={() => setPrintMode('full')} 
-                      className="mr-2" 
-                    />
-                    <span className={t.text}>Volledig draaiboek</span>
-                  </label>
-                </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={printRundown} 
-                    className={`${t.button} px-4 py-2 rounded flex-1`}
-                  >
-                    📄 Download TXT
-                  </button>
-                  <button 
-                    onClick={() => setShowPrintModal(false)} 
-                    className={`${t.buttonSecondary} px-4 py-2 rounded flex-1`}
-                  >
-                    Annuleren
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Forms */}
-      {showAddForm && (
-        <ItemForm 
-          onSave={addItem} 
-          onCancel={() => setShowAddForm(false)}
-          theme={theme}
-          formatTimeShort={formatTimeShort}
-          parseTimeInput={parseTimeInput}
-          isSearchingSpotify={isSearchingSpotify}
-          setIsSearchingSpotify={setIsSearchingSpotify}
-        />
-      )}
-      
-      {editingItem && (
-        <ItemForm 
-          item={editingItem} 
-          onSave={(updated) => updateItem(editingItem.id, updated)} 
-          onCancel={() => setEditingItem(null)}
-          theme={theme}
-          formatTimeShort={formatTimeShort}
-          parseTimeInput={parseTimeInput}
-          isSearchingSpotify={isSearchingSpotify}
-          setIsSearchingSpotify={setIsSearchingSpotify}
-        />
-      )}
-
-      {/* Item Type Manager */}
-      {showItemTypeManager && (
-        <ItemTypeManager
-          currentUser={currentUser}
-          theme={theme}
-          onClose={() => setShowItemTypeManager(false)}
-          onItemTypesChanged={handleItemTypesChanged}
-        />
-      )}
-
-      {/* Footer */}
-      <footer className={`mt-8 py-4 border-t ${t.border}`}>
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-            <div className={`text-sm ${t.textSecondary}`}>
-              © {COPYRIGHT_YEAR} Landstede MBO. Alle rechten voorbehouden.
-            </div>
-            <div className="flex items-center gap-4">
-              {/* Debug knoppen - alleen in development */}
-              <button 
-                onClick={debugCurrentItems}
-                className={`text-xs px-2 py-1 rounded ${t.buttonSecondary} opacity-50 hover:opacity-100`}
-                title="Debug huidige items"
-              >
-                🔍 Debug Items
-              </button>
-              <button 
-                onClick={testCopyFunction}
-                className={`text-xs px-2 py-1 rounded ${t.buttonSecondary} opacity-50 hover:opacity-100`}
-                title="Test kopiëerfunctie"
-              >
-                🧪 Test Copy
-              </button>
-              <div className={`text-sm ${t.textSecondary}`}>
-                Radio Rundown Pro v{APP_VERSION}
-              </div>
-              <div className={`text-xs ${t.textSecondary}`}>
-                Build: {BUILD_DATE}
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
-      
-      {/* Feedback Modal */}
-      {showFeedbackModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className={`${t.card} p-6 rounded-lg shadow-xl max-w-md w-full mx-4`}>
-            <h2 className={`text-xl font-bold mb-4 ${t.text}`}>Feedback & Suggesties</h2>
-            
-            <div className="mb-4">
-              <label className={`block text-sm mb-2 ${t.text}`}>Type feedback:</label>
-              <select 
-                value={feedbackType} 
-                onChange={(e) => setFeedbackType(e.target.value)}
-                className={`w-full px-3 py-2 rounded border ${t.input}`}
-              >
-                <option value="suggestion">💡 Suggestie</option>
-                <option value="bug">🐛 Bug report</option>
-                <option value="feature">🚀 Feature request</option>
-                <option value="other">💬 Overig</option>
-              </select>
-            </div>
-            
-            <div className="mb-4">
-              <label className={`block text-sm mb-2 ${t.text}`}>Je bericht:</label>
-              <textarea 
-                value={feedback} 
-                onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Beschrijf je feedback, suggestie of probleem..."
-                className={`w-full px-3 py-2 rounded border h-32 ${t.input}`}
-              />
-            </div>
-            
-            <div className="flex gap-3 justify-end">
-              <button 
-                onClick={testFeedbackTable}
-                className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-xs`}
-                title="Test database verbinding"
-              >
-                🔍 Test
-              </button>
-              <button 
-                onClick={() => {
-                  setShowFeedbackModal(false);
-                  setFeedback('');
-                }}
-                className={`${t.buttonSecondary} px-4 py-2 rounded-lg`}
-              >
-                Annuleren
-              </button>
-              <button 
-                onClick={submitFeedback}
-                disabled={!feedback.trim()}
-                className={`${t.button} px-4 py-2 rounded-lg disabled:opacity-50`}
-              >
-                Versturen
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default RadioRundownPro;
-
-// Debug functie om items te inspecteren
-  const debugCurrentItems = async () => {
-    if (!currentRundownId) {
-      console.log('❌ No current rundown selected');
-      return;
-    }
-    
-    console.log('🔍 Debugging items for runbook:', currentRundownId);
-    
-    // Haal direct uit database
-    const { data: dbItems, error } = await supabase
-      .from('items')
-      .select('*')
-      .eq('runbook_id', currentRundownId)
-      .order('position');
-    
-    console.log('📊 Raw database items:', dbItems);
-    console.log('📊 Current state items:', items);
-    
-    if (dbItems) {
-      dbItems.forEach((item, index) => {
-        console.log(`Item ${index + 1}:`, {
-          id: item.id,
-          type: item.type,
-          title: item.title,
-          artist: item.artist,
-          notes: item.notes,
-          first_words: item.first_words,
-          last_words: item.last_words,
-          duration: item.duration,
-          position: item.position
-        });
-      });
-    }
-    
-    if (error) {
-      console.error('❌ Error fetching debug items:', error);
-    }
-  };
-
-  // Monitor items state changes
-  useEffect(() => {
-    console.log('🔄 Items state changed:', items.length, 'items');
-    if (items.length > 0) {
-      console.log('📋 First item sample:', {
-        id: items[0].id,
-        type: items[0].type,
-        title: items[0].title,
-        artist: items[0].artist,
-        notes: items[0].notes ? 'HAS_NOTES' : 'NO_NOTES',
-        first_words: items[0].first_words ? 'HAS_FIRST_WORDS' : 'NO_FIRST_WORDS'
-      });
-    }
-  }, [items]);

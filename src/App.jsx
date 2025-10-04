@@ -300,8 +300,35 @@ const RadioRundownPro = () => {
   const addItem = async (item) => {
     if (!currentRundownId) return;
     const position = items.length;
-    const { data } = await supabase.from('items').insert([{ runbook_id: currentRundownId, ...item, position }]).select();
-    if (data) setItems([...items, data[0]]);
+    
+    console.log('📋 Adding item to database:', {
+      runbook_id: currentRundownId,
+      position: position,
+      item: item
+    });
+    
+    try {
+      const { data, error } = await supabase.from('items').insert([{ runbook_id: currentRundownId, ...item, position }]).select();
+      
+      if (error) {
+        console.error('❌ Database error when adding item:', error);
+        console.error('❌ Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        return;
+      }
+      
+      if (data) {
+        console.log('✅ Item successfully added to database:', data[0]);
+        setItems([...items, data[0]]);
+      }
+    } catch (error) {
+      console.error('❌ Unexpected error adding item:', error);
+    }
+    
     setShowAddForm(false);
   };
 
@@ -482,12 +509,18 @@ const RadioRundownPro = () => {
       const newItem = {
         type: itemType.name,
         title: `Nieuw ${itemType.display_name.toLowerCase()}`,
-        artist: itemType.name === 'music' ? '' : undefined,
         duration: itemType.default_duration,
         color: itemType.color,
-        user_item_type_id: itemType.id || null
+        user_item_type_id: itemType.id || null,
+        // Zorg voor betekenisvolle defaults voor belangrijke velden
+        artist: itemType.name === 'music' ? 'Onbekende artiest' : null,
+        notes: itemType.name === 'talk' ? 'Voeg hier je presentatie-notities toe...' : 
+               itemType.name === 'reportage' ? 'Beschrijf hier je reportage...' :
+               itemType.name === 'live' ? 'Live verbinding details...' : null,
+        first_words: itemType.name === 'talk' ? 'Hallo en welkom...' :
+                    itemType.name === 'reportage' ? 'We schakelen over naar...' : null
       };
-      console.log('🔄 Creating new item:', newItem);
+      console.log('🔄 Creating new item with defaults:', newItem);
       addItem(newItem);
     } else {
       console.error('❌ Item type not found:', typeName);

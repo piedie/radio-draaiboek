@@ -1,10 +1,18 @@
 -- Feedback System Migration
 -- Maak feedback tabel aan voor gebruikersfeedback
 
+-- Drop existing policies first (in case of re-run)
+DROP POLICY IF EXISTS "Users can view their own feedback" ON feedback;
+DROP POLICY IF EXISTS "Users can insert feedback" ON feedback;
+DROP POLICY IF EXISTS "Admin can manage all feedback" ON feedback;
+
+-- Drop table if exists (voor clean slate)
+DROP TABLE IF EXISTS feedback;
+
 -- Feedback tabel
-CREATE TABLE IF NOT EXISTS feedback (
+CREATE TABLE feedback (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    user_id UUID,
     user_email TEXT,
     type TEXT NOT NULL CHECK (type IN ('suggestion', 'bug', 'feature', 'other')),
     message TEXT NOT NULL,
@@ -17,21 +25,18 @@ CREATE TABLE IF NOT EXISTS feedback (
 -- RLS policies voor feedback
 ALTER TABLE feedback ENABLE ROW LEVEL SECURITY;
 
--- Gebruikers kunnen hun eigen feedback zien en nieuwe feedback toevoegen
+-- Simpele policy: alle ingelogde gebruikers kunnen feedback toevoegen
+CREATE POLICY "Authenticated users can insert feedback" ON feedback
+    FOR INSERT TO authenticated WITH CHECK (true);
+
+-- Gebruikers kunnen hun eigen feedback zien
 CREATE POLICY "Users can view their own feedback" ON feedback
-    FOR SELECT USING (auth.uid() = user_id);
+    FOR SELECT TO authenticated USING (auth.uid()::text = user_id::text);
 
-CREATE POLICY "Users can insert feedback" ON feedback
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
-
--- Admin policy (pas email aan naar jouw admin email)
+-- Admin policy - ALLEEN voor jouw email
 CREATE POLICY "Admin can manage all feedback" ON feedback
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM auth.users 
-            WHERE auth.users.id = auth.uid() 
-            AND auth.users.email = 'jouw-admin-email@example.com'
-        )
+    FOR ALL TO authenticated USING (
+        auth.jwt() ->> 'email' = 'piedie@piedie.net'
     );
 
 -- Index voor performance

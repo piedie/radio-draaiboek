@@ -9,7 +9,7 @@ import RundownList from './components/RundownList';
 import { loadUserItemTypes, getItemTypeByName } from './utils/itemTypeManager';
 
 // Versie informatie
-const APP_VERSION = '2.7';
+const APP_VERSION = '2.8';
 const BUILD_DATE = '2025-10-04';
 const COPYRIGHT_YEAR = new Date().getFullYear();
 
@@ -371,28 +371,54 @@ const RadioRundownPro = () => {
   const getCumulativeTime = (index) => items.slice(0, index + 1).reduce((sum, item) => sum + item.duration, 0);
   const totalDuration = items.reduce((sum, item) => sum + item.duration, 0);
 
-  // Timer effect
+  // Timer effect - Accurate timing
   useEffect(() => {
+    let startTime = null;
+    let animationFrameId = null;
+    
     if (isPlaying) {
-      intervalRef.current = setInterval(() => {
-        setCurrentTime(prev => { 
-          const newTime = prev >= totalDuration ? 0 : prev + 1;
-          // Sync naar externe klok
-          localStorage.setItem('radio-clock-state', JSON.stringify({
-            currentTime: newTime,
-            isPlaying: newTime < totalDuration,
-            totalDuration,
-            timestamp: Date.now()
-          }));
-          if (prev >= totalDuration) { 
-            setIsPlaying(false); 
-            return 0; 
-          } 
-          return newTime;
-        });
-      }, 1000);
-    } else if (intervalRef.current) clearInterval(intervalRef.current);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+      startTime = performance.now() - (currentTime * 1000);
+      
+      const updateTimer = () => {
+        const now = performance.now();
+        const elapsedSeconds = Math.floor((now - startTime) / 1000);
+        
+        if (elapsedSeconds !== currentTime) {
+          setCurrentTime(prev => {
+            const newTime = elapsedSeconds >= totalDuration ? totalDuration : elapsedSeconds;
+            
+            // Sync naar externe klok
+            localStorage.setItem('radio-clock-state', JSON.stringify({
+              currentTime: newTime,
+              isPlaying: newTime < totalDuration,
+              totalDuration,
+              timestamp: Date.now()
+            }));
+            
+            if (elapsedSeconds >= totalDuration) {
+              setIsPlaying(false);
+              return totalDuration;
+            }
+            
+            return newTime;
+          });
+        }
+        
+        if (elapsedSeconds < totalDuration) {
+          animationFrameId = requestAnimationFrame(updateTimer);
+        } else {
+          setIsPlaying(false);
+        }
+      };
+      
+      animationFrameId = requestAnimationFrame(updateTimer);
+    }
+    
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
   }, [isPlaying, totalDuration]);
 
   // Sync klok status naar localStorage voor externe klok

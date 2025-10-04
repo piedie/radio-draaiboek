@@ -83,11 +83,24 @@
         }
       }
 
-      // Poll localStorage for updates
-      setInterval(() => {
+      // Poll localStorage for updates with higher frequency for smoother updates
+      let lastUpdateTime = 0;
+      
+      function pollClockData() {
         loadClockData();
-        updateClock();
-      }, 1000);
+        
+        // Only update display if data changed or if playing (for smooth seconds)
+        const now = Date.now();
+        if (clockData.isPlaying || now - lastUpdateTime > 500) {
+          updateClock();
+          lastUpdateTime = now;
+        }
+        
+        requestAnimationFrame(pollClockData);
+      }
+      
+      // Start polling with animation frame for smooth updates
+      pollClockData();
 
       // Load initial data
       loadClockData();

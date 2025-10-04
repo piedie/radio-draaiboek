@@ -1243,13 +1243,20 @@ const RadioRundownPro = () => {
               © {COPYRIGHT_YEAR} Landstede MBO. Alle rechten voorbehouden.
             </div>
             <div className="flex items-center gap-4">
-              {/* Debug knop - alleen in development */}
+              {/* Debug knoppen - alleen in development */}
               <button 
                 onClick={testCopyFunction}
                 className={`text-xs px-2 py-1 rounded ${t.buttonSecondary} opacity-50 hover:opacity-100`}
                 title="Test kopiëerfunctie"
               >
                 🧪 Test Copy
+              </button>
+              <button 
+                onClick={inspectDatabase}
+                className={`text-xs px-2 py-1 rounded ${t.buttonSecondary} opacity-50 hover:opacity-100`}
+                title="Inspecteer database direct"
+              >
+                🔍 Inspect DB
               </button>
               <div className={`text-sm ${t.textSecondary}`}>
                 Radio Rundown Pro v{APP_VERSION}
@@ -1325,3 +1332,61 @@ const RadioRundownPro = () => {
 };
 
 export default RadioRundownPro;
+
+// Direct database inspection (debug functie)
+const inspectDatabase = async () => {
+  if (!currentRundownId) {
+    console.log('❌ No runbook selected');
+    return;
+  }
+  
+  try {
+    console.log('🔍 === DATABASE INSPECTION ===');
+    console.log('🔍 Runbook ID:', currentRundownId);
+    
+    // Get ALL items for this runbook
+    const { data: dbItems, error } = await supabase
+      .from('items')
+      .select('*')
+      .eq('runbook_id', currentRundownId)
+      .order('position');
+    
+    if (error) {
+      console.error('❌ Database query failed:', error);
+      return;
+    }
+    
+    console.log('📊 Found', dbItems?.length || 0, 'items in database');
+    
+    if (dbItems && dbItems.length > 0) {
+      dbItems.forEach((item, index) => {
+        console.log(`📊 DB Item ${index + 1}:`, {
+          id: item.id,
+          type: item.type,
+          title: item.title || '❌ NO TITLE',
+          artist: item.artist || '❌ NO ARTIST', 
+          notes: item.notes || '❌ NO NOTES',
+          first_words: item.first_words || '❌ NO FIRST_WORDS',
+          duration: item.duration,
+          position: item.position,
+          created_at: item.created_at
+        });
+      });
+      
+      // Compare with current React state
+      console.log('📊 Current React state has', items.length, 'items');
+      if (items.length > 0) {
+        console.log('📊 First item in React state:', {
+          id: items[0].id,
+          title: items[0].title || '❌ NO TITLE',
+          artist: items[0].artist || '❌ NO ARTIST',
+          notes: items[0].notes || '❌ NO NOTES'
+        });
+      }
+    }
+    
+    console.log('🔍 === END DATABASE INSPECTION ===');
+  } catch (error) {
+    console.error('❌ Database inspection failed:', error);
+  }
+};

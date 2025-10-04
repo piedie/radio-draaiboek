@@ -138,9 +138,15 @@ const RadioRundownPro = () => {
         type: data[0].type,
         title: data[0].title,
         artist: data[0].artist,
-        notes: data[0].notes ? 'HAS_NOTES' : 'NO_NOTES',
-        first_words: data[0].first_words ? 'HAS_FIRST_WORDS' : 'NO_FIRST_WORDS'
+        notes: data[0].notes,
+        first_words: data[0].first_words,
+        spotify_url: data[0].spotify_url,
+        duration: data[0].duration,
+        position: data[0].position,
+        runbook_id: data[0].runbook_id,
+        created_at: data[0].created_at
       });
+      console.log('📋 Complete first item RAW:', data[0]);
     }
     if (data) setItems(data);
   };
@@ -158,9 +164,12 @@ const RadioRundownPro = () => {
         type: items[0].type,
         title: items[0].title,
         artist: items[0].artist,
-        notes: items[0].notes ? 'HAS_NOTES' : 'NO_NOTES',
-        first_words: items[0].first_words ? 'HAS_FIRST_WORDS' : 'NO_FIRST_WORDS'
+        notes: items[0].notes,
+        first_words: items[0].first_words,
+        spotify_url: items[0].spotify_url,
+        duration: items[0].duration
       });
+      console.log('📋 Complete first item in state RAW:', items[0]);
     }
   }, [items]);
 

@@ -125,53 +125,13 @@ const RadioRundownPro = () => {
   };
 
   const loadRunbookItems = async (runbookId) => {
-    console.log('🔄 Loading items for runbook:', runbookId);
-    const { data, error } = await supabase.from('items').select('*').eq('runbook_id', runbookId).order('position');
-    if (error) {
-      console.error('❌ Error loading items:', error);
-      return;
-    }
-    console.log('📋 Loaded items:', data?.length || 0);
-    if (data && data.length > 0) {
-      console.log('📋 First item sample:', {
-        id: data[0].id,
-        type: data[0].type,
-        title: data[0].title,
-        artist: data[0].artist,
-        notes: data[0].notes,
-        first_words: data[0].first_words,
-        spotify_url: data[0].spotify_url,
-        duration: data[0].duration,
-        position: data[0].position,
-        runbook_id: data[0].runbook_id,
-        created_at: data[0].created_at
-      });
-      console.log('📋 Complete first item RAW:', data[0]);
-    }
+    const { data } = await supabase.from('items').select('*').eq('runbook_id', runbookId).order('position');
     if (data) setItems(data);
   };
 
   useEffect(() => {
     if (currentRundownId) loadRunbookItems(currentRundownId);
   }, [currentRundownId]);
-
-  // Monitor items state changes
-  useEffect(() => {
-    console.log('🔄 Items state changed:', items.length, 'items');
-    if (items.length > 0) {
-      console.log('📋 First item in state:', {
-        id: items[0].id,
-        type: items[0].type,
-        title: items[0].title,
-        artist: items[0].artist,
-        notes: items[0].notes,
-        first_words: items[0].first_words,
-        spotify_url: items[0].spotify_url,
-        duration: items[0].duration
-      });
-      console.log('📋 Complete first item in state RAW:', items[0]);
-    }
-  }, [items]);
 
   // Authentication handlers
   const handleLogin = async () => {
@@ -276,11 +236,11 @@ const RadioRundownPro = () => {
         }, 100);
         
         console.log('🎉 Runbook duplicated successfully');
-        console.log(`✅ Draaiboek "${original.name}" succesvol gekopieerd!`);
+        alert(`Draaiboek "${original.name}" succesvol gekopieerd!`);
       }
     } catch (error) {
       console.error('❌ Error duplicating runbook:', error);
-      console.error('❌ Fout bij kopiëren van draaiboek:', error.message);
+      alert('Fout bij kopiëren van draaiboek: ' + error.message);
     }
   };
 
@@ -300,35 +260,8 @@ const RadioRundownPro = () => {
   const addItem = async (item) => {
     if (!currentRundownId) return;
     const position = items.length;
-    
-    console.log('📋 Adding item to database:', {
-      runbook_id: currentRundownId,
-      position: position,
-      item: item
-    });
-    
-    try {
-      const { data, error } = await supabase.from('items').insert([{ runbook_id: currentRundownId, ...item, position }]).select();
-      
-      if (error) {
-        console.error('❌ Database error when adding item:', error);
-        console.error('❌ Error details:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        });
-        return;
-      }
-      
-      if (data) {
-        console.log('✅ Item successfully added to database:', data[0]);
-        setItems([...items, data[0]]);
-      }
-    } catch (error) {
-      console.error('❌ Unexpected error adding item:', error);
-    }
-    
+    const { data } = await supabase.from('items').insert([{ runbook_id: currentRundownId, ...item, position }]).select();
+    if (data) setItems([...items, data[0]]);
     setShowAddForm(false);
   };
 
@@ -365,7 +298,7 @@ const RadioRundownPro = () => {
       console.log('✅ Feedback saved:', data);
       setFeedback('');
       setShowFeedbackModal(false);
-      console.log('✅ Feedback submitted successfully! Thanks! 🙏');
+      alert('Bedankt voor je feedback! 🙏');
     } catch (error) {
       console.error('❌ Feedback error details:', {
         message: error.message,
@@ -382,8 +315,7 @@ const RadioRundownPro = () => {
         errorMsg = 'Feedback tabel bestaat niet. Database migratie nodig.';
       }
       
-      console.error('❌ ' + errorMsg);
-      console.error('❌ Details:', error.message);
+      alert(errorMsg + '\n\nDetails: ' + error.message);
     }
   };
 
@@ -406,54 +338,10 @@ const RadioRundownPro = () => {
     }
   };
 
-  // Test database items directly (debug functie)
-  const testDatabaseItems = async () => {
-    if (!currentRundownId) {
-      console.log('❌ No runbook selected for database test');
-      return;
-    }
-    
-    try {
-      console.log('🔍 Testing database items for runbook:', currentRundownId);
-      const { data, error } = await supabase
-        .from('items')
-        .select('*')
-        .eq('runbook_id', currentRundownId)
-        .order('position');
-      
-      if (error) {
-        console.error('❌ Database items test failed:', error);
-        return;
-      }
-      
-      console.log('📊 Database query result:', data);
-      console.log('📊 Number of items found:', data?.length || 0);
-      
-      if (data && data.length > 0) {
-        data.forEach((item, index) => {
-          console.log(`📊 Item ${index + 1}:`, {
-            id: item.id,
-            type: item.type || 'NO_TYPE',
-            title: item.title || 'NO_TITLE',
-            artist: item.artist || 'NO_ARTIST',
-            notes: item.notes || 'NO_NOTES',
-            first_words: item.first_words || 'NO_FIRST_WORDS',
-            runbook_id: item.runbook_id,
-            position: item.position
-          });
-        });
-      }
-      
-      console.log(`✅ Database test completed: ${data?.length || 0} items found`);
-    } catch (error) {
-      console.error('❌ Database items test error:', error);
-    }
-  };
-
   // Test copy functionality
   const testCopyFunction = async () => {
     if (!currentRundownId) {
-      console.log('❌ No runbook selected for copy test');
+      alert('Geen runbook geselecteerd');
       return;
     }
     
@@ -509,18 +397,12 @@ const RadioRundownPro = () => {
       const newItem = {
         type: itemType.name,
         title: `Nieuw ${itemType.display_name.toLowerCase()}`,
+        artist: itemType.name === 'music' ? '' : undefined,
         duration: itemType.default_duration,
         color: itemType.color,
-        user_item_type_id: itemType.id || null,
-        // Zorg voor betekenisvolle defaults voor belangrijke velden
-        artist: itemType.name === 'music' ? 'Onbekende artiest' : null,
-        notes: itemType.name === 'talk' ? 'Voeg hier je presentatie-notities toe...' : 
-               itemType.name === 'reportage' ? 'Beschrijf hier je reportage...' :
-               itemType.name === 'live' ? 'Live verbinding details...' : null,
-        first_words: itemType.name === 'talk' ? 'Hallo en welkom...' :
-                    itemType.name === 'reportage' ? 'We schakelen over naar...' : null
+        user_item_type_id: itemType.id || null
       };
-      console.log('🔄 Creating new item with defaults:', newItem);
+      console.log('🔄 Creating new item:', newItem);
       addItem(newItem);
     } else {
       console.error('❌ Item type not found:', typeName);
@@ -742,7 +624,7 @@ const RadioRundownPro = () => {
   // Download alle draaiboeken als TXT bestanden
   const downloadAllRundowns = async () => {
     if (rundowns.length === 0) {
-      console.log('❌ Geen draaiboeken om te downloaden');
+      alert('Geen draaiboeken om te downloaden');
       return;
     }
 
@@ -828,11 +710,11 @@ const RadioRundownPro = () => {
       }
       
       console.log('✅ Bulk download completed');
-      console.log(`✅ ${rundowns.length} draaiboeken succesvol gedownload!`);
+      alert(`${rundowns.length} draaiboeken succesvol gedownload!`);
       
     } catch (error) {
       console.error('❌ Error during bulk download:', error);
-      console.error('❌ Fout bij downloaden:', error.message);
+      alert('Fout bij downloaden: ' + error.message);
     }
   };
 
@@ -1361,20 +1243,13 @@ const RadioRundownPro = () => {
               © {COPYRIGHT_YEAR} Landstede MBO. Alle rechten voorbehouden.
             </div>
             <div className="flex items-center gap-4">
-              {/* Debug knoppen - alleen in development */}
+              {/* Debug knop - alleen in development */}
               <button 
                 onClick={testCopyFunction}
                 className={`text-xs px-2 py-1 rounded ${t.buttonSecondary} opacity-50 hover:opacity-100`}
                 title="Test kopiëerfunctie"
               >
                 🧪 Test Copy
-              </button>
-              <button 
-                onClick={testDatabaseItems}
-                className={`text-xs px-2 py-1 rounded ${t.buttonSecondary} opacity-50 hover:opacity-100`}
-                title="Test database items"
-              >
-                🔍 Test DB
               </button>
               <div className={`text-sm ${t.textSecondary}`}>
                 Radio Rundown Pro v{APP_VERSION}

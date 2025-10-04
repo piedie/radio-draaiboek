@@ -266,9 +266,23 @@ const RadioRundownPro = () => {
   };
 
   const updateItem = async (id, updated) => {
-    await supabase.from('items').update(updated).eq('id', id);
-    setItems(items.map(item => item.id === id ? { ...item, ...updated } : item));
-    setEditingItem(null);
+    console.log('🔄 Updating item:', { id, updated });
+    
+    try {
+      const { data, error } = await supabase.from('items').update(updated).eq('id', id).select();
+      
+      if (error) {
+        console.error('❌ Database update failed:', error);
+        console.error('❌ Failed to update item:', { id, updated });
+        return;
+      }
+      
+      console.log('✅ Item updated in database:', data[0]);
+      setItems(items.map(item => item.id === id ? { ...item, ...updated } : item));
+      setEditingItem(null);
+    } catch (error) {
+      console.error('❌ Unexpected error updating item:', error);
+    }
   };
 
   // Feedback functions

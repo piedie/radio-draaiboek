@@ -25,7 +25,8 @@ const RundownItem = ({
   // Scoreboard state - initialize with default scores if scoreboard is enabled
   const [scores, setScores] = useState(() => {
     if (item.type === 'game' && item.enable_scoreboard) {
-      return item.scores || [
+      // Always start with default scores (don't load from database)
+      return [
         { name: 'Speler 1', score: 0 },
         { name: 'Speler 2', score: 0 },
         { name: 'Speler 3', score: 0 }
@@ -179,6 +180,21 @@ const RundownItem = ({
     const newScores = scores.map(player => ({ ...player, score: 0 }));
     setScores(newScores);
   };
+
+  // Reset scores when scoreboard is enabled/disabled
+  React.useEffect(() => {
+    if (item.type === 'game' && item.enable_scoreboard && scores.length === 0) {
+      // Initialize scores when scoreboard is turned on
+      setScores([
+        { name: 'Speler 1', score: 0 },
+        { name: 'Speler 2', score: 0 },
+        { name: 'Speler 3', score: 0 }
+      ]);
+    } else if (!item.enable_scoreboard) {
+      // Clear scores when scoreboard is turned off
+      setScores([]);
+    }
+  }, [item.enable_scoreboard, item.type]);
 
   return (
     <div 

@@ -4,14 +4,14 @@ import { resolve } from "path";
 
 export default defineConfig({
   plugins: [react()],
-  base: "/",
+  base: "/v2/",
   build: {
+    outDir: "dist-v2",
+    emptyOutDir: true,
     rollupOptions: {
       input: {
-        main: resolve(__dirname, "index.html"), // v1
-        v2: resolve(__dirname, "v2.html"),      // v2
+        v2: resolve(__dirname, "v2.html"),
       },
     },
   },
 });
-

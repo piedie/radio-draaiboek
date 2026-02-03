@@ -71,6 +71,24 @@ const RundownItem = ({
     return icons[type] || <Music size={16} />;
   };
 
+  const getStatusMeta = (status) => {
+    switch (status) {
+      case 'checked':
+        return { label: 'Checked', cls: 'bg-green-600 text-white' };
+      case 'review':
+        return { label: 'Review', cls: 'bg-yellow-500 text-black' };
+      case 'montage':
+        return { label: 'Montage', cls: 'bg-blue-600 text-white' };
+      case 'cancelled':
+        return { label: 'Cancel', cls: 'bg-gray-500 text-white' };
+      case 'draft':
+      default:
+        return { label: 'Draft', cls: 'bg-gray-300 text-gray-900' };
+    }
+  };
+
+  const statusMeta = getStatusMeta(item.status);
+
   const handlePlayPreview = (e) => {
     e.stopPropagation();
     console.log('Preview clicked for:', item.title, 'URL:', item.spotify_preview_url);
@@ -220,7 +238,10 @@ const RundownItem = ({
             {getIcon(item.type)}
           </div>
           <div className="flex-1 cursor-pointer" onClick={() => toggleExpanded(item.id)}>
-            <div className={`font-medium ${t.text}`}>{item.title}</div>
+            <div className="flex items-center gap-2">
+              <div className={`font-medium ${t.text}`}>{item.title}</div>
+              <span className={`text-xs px-2 py-0.5 rounded ${statusMeta.cls}`}>{statusMeta.label}</span>
+            </div>
             {item.artist && (
               <div className={`text-sm ${t.textSecondary}`}>{item.artist}</div>
             )}

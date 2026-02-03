@@ -9,8 +9,8 @@ import RundownList from './components/RundownList';
 import { loadUserItemTypes, getItemTypeByName } from './utils/itemTypeManager';
 
 // Versie informatie
-const APP_VERSION = '3.0';
-const BUILD_DATE = '2025-10-04';
+const APP_VERSION = '3.1';
+const BUILD_DATE = '2026-02-03';
 const COPYRIGHT_YEAR = new Date().getFullYear();
 
 const RadioRundownPro = () => {
@@ -102,7 +102,10 @@ const RadioRundownPro = () => {
   const loadUserData = async (userId) => {
     try {
       // Laad runbooks
-      const { data: runbooksData } = await supabase.from('runbooks').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+      const { data: runbooksData } = await supabase
+        .from('runbooks')
+        .select('*')
+        .order('created_at', { ascending: false });
       if (runbooksData) {
         setRundowns(runbooksData);
         if (runbooksData.length > 0) {
@@ -260,7 +263,7 @@ const RadioRundownPro = () => {
   const addItem = async (item) => {
     if (!currentRundownId) return;
     const position = items.length;
-    
+
     // Filter out fields that don't exist in database schema
     const dbFields = {
       runbook_id: currentRundownId,
@@ -279,7 +282,8 @@ const RadioRundownPro = () => {
       spotify_preview_url: item.spotify_preview_url,
       audio_files: item.audio_files,
       user_item_type_id: item.user_item_type_id,
-      enable_scoreboard: item.enable_scoreboard  // Include scoreboard toggle
+      enable_scoreboard: item.enable_scoreboard,
+      status: item.status // NEW
       // Note: scores array is kept in React state only, not saved to database
     };
     
@@ -328,7 +332,8 @@ const RadioRundownPro = () => {
       spotify_preview_url: updated.spotify_preview_url,
       audio_files: updated.audio_files,
       user_item_type_id: updated.user_item_type_id,
-      enable_scoreboard: updated.enable_scoreboard  // Include scoreboard toggle
+      enable_scoreboard: updated.enable_scoreboard,
+      status: updated.status // NEW
       // Note: scores array is kept in React state only, not saved to database
     };
     
@@ -1025,6 +1030,13 @@ const RadioRundownPro = () => {
               >
                 <MessageSquare size={20} />
               </button>
+              <button
+                onClick={() => { setShowAdminPanel(true); loadFeedbackForAdmin(); }}
+                className={`${t.buttonSecondary} p-2 rounded-lg`}
+                title="Admin console"
+              >
+                <Settings size={20} />
+              </button>
               <button 
                 onClick={handleLogout} 
                 className={`${t.buttonSecondary} px-4 py-2 rounded-lg flex items-center gap-2`}
@@ -1219,6 +1231,7 @@ const RadioRundownPro = () => {
                 handleDragStart={handleDragStart}
                 handleDragOver={handleDragOver}
                 handleDrop={handleDrop}
+                onInlineUpdate={(id, updated) => updateItem(id, updated)}
               />
             </div>
           </div>
@@ -1380,40 +1393,113 @@ const RadioRundownPro = () => {
         />
       )}
 
-      {/* Footer */}
-      <footer className={`mt-8 py-4 border-t ${t.border}`}>
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-            <div className={`text-sm ${t.textSecondary}`}>
-              © {COPYRIGHT_YEAR} Landstede MBO. Alle rechten voorbehouden.
-            </div>
-            <div className="flex items-center gap-4">
-              {/* Debug knoppen - alleen in development */}
-              <button 
-                onClick={testCopyFunction}
-                className={`text-xs px-2 py-1 rounded ${t.buttonSecondary} opacity-50 hover:opacity-100`}
-                title="Test kopiëerfunctie"
-              >
-                🧪 Test Copy
-              </button>
-              <button 
-                onClick={inspectDatabase}
-                className={`text-xs px-2 py-1 rounded ${t.buttonSecondary} opacity-50 hover:opacity-100`}
-                title="Inspecteer database direct"
-              >
-                🔍 Inspect DB
-              </button>
-              <div className={`text-sm ${t.textSecondary}`}>
-                Radio Rundown Pro v{APP_VERSION}
+      {/* Admin Panel - Feedback viewer */}
+      {showAdminPanel && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className={`${t.card} rounded-lg shadow-xl w-[min(1100px,95vw)] h-[min(700px,90vh)] mx-4 border ${t.border} overflow-hidden`}>
+            <div className={`flex items-center justify-between px-4 py-3 border-b ${t.border}`}>
+              <div>
+                <div className={`text-lg font-bold ${t.text}`}>Admin console</div>
+                <div className={`text-xs ${t.textSecondary}`}>Feedback viewer (max 200)</div>
               </div>
-              <div className={`text-xs ${t.textSecondary}`}>
-                Build: {BUILD_DATE}
+              <div className="flex items-center gap-2">
+                <button
+                  className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
+                  onClick={loadFeedbackForAdmin}
+                  disabled={adminFeedbackLoading}
+                >
+                  ↻ Refresh
+                </button>
+                <button
+                  className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
+                  onClick={() => setShowAdminPanel(false)}
+                >
+                  Sluiten
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-12 h-full">
+              {/* Left: list */}
+              <div className={`col-span-12 md:col-span-5 border-r ${t.border} overflow-auto`}>
+                <div className={`px-4 py-2 text-xs font-semibold ${t.textSecondary} border-b ${t.border}`}>
+                  Ingekomen feedback
+                </div>
+
+                {adminFeedbackLoading && (
+                  <div className={`p-4 text-sm ${t.textSecondary}`}>Laden…</div>
+                )}
+                {adminFeedbackError && (
+                  <div className="p-4 text-sm text-red-500">{adminFeedbackError}</div>
+                )}
+
+                {!adminFeedbackLoading && !adminFeedbackError && adminFeedback.length === 0 && (
+                  <div className={`p-4 text-sm ${t.textSecondary}`}>Nog geen feedback.</div>
+                )}
+
+                <div className="divide-y">
+                  {adminFeedback.map((f) => (
+                    <button
+                      key={f.id}
+                      className={`w-full text-left px-4 py-3 hover:opacity-90 ${selectedFeedbackId === f.id ? (theme === 'light' ? 'bg-gray-100' : 'bg-gray-700/50') : ''}`}
+                      onClick={() => setSelectedFeedbackId(f.id)}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className={`text-xs font-semibold ${t.text}`}>{(f.type || 'suggestion').toUpperCase()}</div>
+                        <div className={`text-[11px] ${t.textSecondary}`}>{f.created_at ? new Date(f.created_at).toLocaleString() : ''}</div>
+                      </div>
+                      <div className={`text-sm mt-1 ${t.text} line-clamp-2`}>{f.message || ''}</div>
+                      <div className={`text-[11px] mt-1 ${t.textSecondary}`}>{f.user_email || f.user_id || 'onbekend'}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right: details */}
+              <div className="col-span-12 md:col-span-7 overflow-auto">
+                <div className={`px-4 py-2 text-xs font-semibold ${t.textSecondary} border-b ${t.border}`}>
+                  Details
+                </div>
+
+                {(() => {
+                  const selected = adminFeedback.find((f) => f.id === selectedFeedbackId);
+                  if (!selected) {
+                    return <div className={`p-4 text-sm ${t.textSecondary}`}>Selecteer links een item.</div>;
+                  }
+
+                  return (
+                    <div className="p-4 space-y-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className={`text-lg font-bold ${t.text}`}>{(selected.type || 'suggestion').toUpperCase()}</div>
+                          <div className={`text-xs ${t.textSecondary}`}>{selected.created_at ? new Date(selected.created_at).toLocaleString() : ''}</div>
+                          <div className={`text-xs mt-1 ${t.textSecondary}`}>Van: {selected.user_email || selected.user_id || 'onbekend'}</div>
+                        </div>
+                        <button
+                          className="border border-red-500 text-red-600 hover:bg-red-50 px-3 py-2 rounded text-sm"
+                          onClick={() => deleteFeedbackAsAdmin(selected.id)}
+                        >
+                          Verwijderen
+                        </button>
+                      </div>
+
+                      <div>
+                        <div className={`text-xs font-semibold mb-1 ${t.textSecondary}`}>Bericht</div>
+                        <div className={`text-sm whitespace-pre-wrap ${t.text}`}>{selected.message || ''}</div>
+                      </div>
+
+                      <div className={`text-xs ${t.textSecondary}`}>
+                        ID: <span className="font-mono">{selected.id}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
         </div>
-      </footer>
-      
+      )}
+
       {/* Feedback Modal */}
       {showFeedbackModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

@@ -28,6 +28,7 @@ const ItemForm = ({
       spotify_preview_url: null,
       audio_files: [],
       enable_scoreboard: false,
+      status: 'draft',
       scores: [
         { name: 'Speler 1', score: 0 },
         { name: 'Speler 2', score: 0 },
@@ -86,6 +87,13 @@ const ItemForm = ({
   ];
 
   const connectionTypes = ['LUCI', 'Teams', 'WZ', 'Telefoon'];
+  const statusOptions = [
+    { value: 'draft', label: 'Concept' },
+    { value: 'review', label: 'Review' },
+    { value: 'montage', label: 'Montage' },
+    { value: 'checked', label: 'Checked' },
+    { value: 'cancelled', label: 'Geannuleerd' }
+  ];
 
   const handleSpotifySearch = async () => {
     const query = searchQuery || form.title + (form.artist ? ' ' + form.artist : '');
@@ -729,6 +737,20 @@ const ItemForm = ({
               </div>
             </>
           )}
+
+          {/* Status */}
+          <div>
+            <label className={`block text-sm font-medium mb-1 ${t.text}`}>Status</label>
+            <select
+              className={`w-full p-2 rounded border ${t.input}`}
+              value={form.status || 'draft'}
+              onChange={(e) => setForm({ ...form, status: e.target.value })}
+            >
+              {statusOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Actieknoppen */}

@@ -1,0 +1,28 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      # Central config
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+
+      # Reuse existing TLS/config data from the current container
+      - repo_caddy_data:/data
+      - repo_caddy_config:/config
+
+      # Static sites (host paths)
+      - /var/www/draaiboek/dist:/srv/draaiboek:ro
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  repo_caddy_data:
+    external: true
+  repo_caddy_config:
+    external: true

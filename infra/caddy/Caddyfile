@@ -1,0 +1,25 @@
+{
+  # Optional: email for Let's Encrypt notifications
+  # email you@example.com
+}
+
+# --- Draaiboek app (statische build) ---
+draaiboek.landstede.live {
+  root * /srv/draaiboek
+  file_server
+  try_files {path} /index.html
+
+  # Sensible caching: HTML should revalidate; assets can be cached long.
+  @html {
+    path / /index.html
+  }
+  header @html Cache-Control "no-cache"
+
+  @assets path /assets/*
+  header @assets Cache-Control "public, max-age=31536000, immutable"
+}
+
+# --- Owncast ---
+stream.landstede.live {
+  reverse_proxy host.docker.internal:8090
+}

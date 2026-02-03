@@ -48,7 +48,13 @@ const RadioRundownPro = () => {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [feedbackType, setFeedbackType] = useState('suggestion');
-  
+
+  // Admin/Feedback viewer state (Admin console)
+  const [adminFeedback, setAdminFeedback] = useState([]);
+  const [adminFeedbackLoading, setAdminFeedbackLoading] = useState(false);
+  const [adminFeedbackError, setAdminFeedbackError] = useState(null);
+  const [selectedFeedbackId, setSelectedFeedbackId] = useState(null);
+
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [showJingleEditor, setShowJingleEditor] = useState(false);

@@ -1460,128 +1460,108 @@ const RadioRundownPro = () => {
                 </div>
               </div>
 
-                 <div className="space-y-2 mb-4">le live tijd */}
-                   {jingles.map(jingle => (
-                     <button e="space-y-6">
-                       key={jingle.id}  binnen de klok kolom als klok zichtbaar is */}
-                       onClick={() => { addJingle(jingle); setShowJingleEditor(false); }} 
-                       className={`w-full text-left px-4 py-3 rounded-lg ${t.buttonSecondary} hover:bg-blue-100 dark:hover:bg-blue-900`}
-                     ><div className="flex items-center justify-center">
-                       <div className={`font-medium ${t.text}`}>{jingle.title}</div>
-                       <div className={`text-xs ${t.textSecondary}`}>Duur: {formatTimeShort(jingle.duration)}</div>
-                     </button> LIVE ATOOMTIJD
-                   ))}    </div>
-                 </div>   <div className={`text-4xl font-mono font-bold ${t.text} tracking-wider`} style={{
-               </div>       fontFamily: 'Consolas, "Courier New", monospace',
-               <div className={`p-6 border-t flex gap-3 ${t.border}`}>
-                 <button  }}>
-                   onClick={() => setShowJingleEditor(false)} 
-                   className={`${t.buttonSecondary} flex-1 px-4 py-2 rounded-lg`}
-                 >        <div className={`text-xs mt-1 ${t.textSecondary}`}>
-                   Sluiten  Nederlandse tijd (CET/CEST)
-                 </button></div>
-               </div>   </div>
-             </div>   </div>
-           </div>   </div>
-         )}       )}
+              {/* Rechter kolom: Klok met eventuele live tijd */}
+              {showClock && (
+                <div className="space-y-6">
+                  {/* Live tijd display binnen de klok kolom als klok zichtbaar is */}
+                  {showLiveTime && (
+                    <div className={`${t.card} rounded-lg p-4 shadow border ${t.border}`}>
+                      <div className="flex items-center justify-center">
+                        <div className="text-center">
+                          <div className={`text-xs font-medium mb-1 ${t.textSecondary}`}>
+                            🔴 LIVE ATOOMTIJD
+                          </div>
+                          <div className={`text-4xl font-mono font-bold ${t.text} tracking-wider`} style={{
+                            fontFamily: 'Consolas, "Courier New", monospace',
+                            letterSpacing: '0.1em'
+                          }}>
+                            {liveTime || '00:00:00'}
+                          </div>
+                          <div className={`text-xs mt-1 ${t.textSecondary}`}>
+                            Nederlandse tijd (CET/CEST)
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-         {/* Print modal */}klok */}
-         {showPrintModal && (ame={`${t.card} rounded-lg p-6 shadow border ${t.border}`}>
-           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-             <div className={`${t.card} p-6 rounded-lg w-96 shadow-2xl`}>
-               <h3 className={`text-lg font-bold mb-4 ${t.text}`}>Printen</h3>
-               <div className="space-y-4">Time}
-                 <div>isPlaying={isPlaying}
-                   <label className="flex items-center mb-2">
-                     <input {theme}
-                       type="radio" rmatTime}
-                       checked={printMode === 'rundown'} 
-                       onChange={() => setPrintMode('rundown')} 
-                       className="mr-2" 
-                     />
-                     <span className={t.text}>Rundown (kort)</span>
-                   </label>
-                   <label className="flex items-center">
-                     <input 
-                       type="radio" 
-                       checked={printMode === 'full'} 
-                       onChange={() => setPrintMode('full')} 
-                       className="mr-2"  bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                     />Name={`${t.card} rounded-lg w-full max-w-md shadow-2xl`}>
-                     <span className={t.text}>Volledig draaiboek</span>
-                   </label>ame={`text-lg font-bold ${t.text}`}>🔔 Jingles</h3>
-                 </div>
-               <div className="p-6">
-                 <div className="space-y-2 mb-4">
-                   {jingles.map(jingle => (
-                     <button 
-                       key={jingle.id} 
-                       onClick={() => { addJingle(jingle); setShowJingleEditor(false); }} 
-                       className={`w-full text-left px-4 py-3 rounded-lg ${t.buttonSecondary} hover:bg-blue-100 dark:hover:bg-blue-900`}
-                     >
-                       <div className={`font-medium ${t.text}`}>{jingle.title}</div>
-                       <div className={`text-xs ${t.textSecondary}`}>Duur: {formatTimeShort(jingle.duration)}</div>
-                     </button>
-                   ))}
-                 </div>
-               </div>
-               <div className={`p-6 border-t flex gap-3 ${t.border}`}>
-                 <button 
-                   onClick={() => setShowJingleEditor(false)} 
-                   className={`${t.buttonSecondary} flex-1 px-4 py-2 rounded-lg`}
-                 >
-                   Sluiten
-                 </button>
-               </div>
-             </div>
-           </div>
-         )}
-
-         {/* Print modal */}
-         {showPrintModal && (
-           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-             <div className={`${t.card} p-6 rounded-lg w-96 shadow-2xl`}>
-               <h3 className={`text-lg font-bold mb-4 ${t.text}`}>Printen</h3>
-               <div className="space-y-4">
-                 <div>
-                   <label className="flex items-center mb-2">
-                     <input 
-                       type="radio" 
-                       checked={printMode === 'rundown'} 
-                       onChange={() => setPrintMode('rundown')} 
-                       className="mr-2" 
-                     />
-                     <span className={t.text}>Rundown (kort)</span>
-                   </label>
-                   <label className="flex items-center">
-                     <input 
-                       type="radio" 
-                       checked={printMode === 'full'} 
-                       onChange={() => setPrintMode('full')} 
-                       className="mr-2" 
-                     />
-                     <span className={t.text}>Volledig draaiboek</span>
-                   </label>
-                 </div>
-                 <div className="flex gap-2">
-                   <button 
-                     onClick={printRundown} 
-                     className={`${t.button} px-4 py-2 rounded flex-1`}
-                   >
-                     📄 Download TXT
-                   </button>
-                   <button 
-                     onClick={() => setShowPrintModal(false)} 
-                     className={`${t.buttonSecondary} px-4 py-2 rounded flex-1`}
-                   >
-                     Annuleren
-                   </button>
-                 </div>
-               </div>
-             </div>
-           </div>
-         )}
+                  {/* Jingle editor */}
+                  {showJingleEditor && (
+                    <div className={`${t.card} rounded-lg p-6 shadow border ${t.border}`}>
+                      <h3 className={`text-lg font-bold mb-4 ${t.text}`}>🔔 Jingles</h3>
+                      <div className="space-y-2 mb-4">
+                        {jingles.map(jingle => (
+                          <button 
+                            key={jingle.id} 
+                            onClick={() => { addJingle(jingle); setShowJingleEditor(false); }} 
+                            className={`w-full text-left px-4 py-3 rounded-lg ${t.buttonSecondary} hover:bg-blue-100 dark:hover:bg-blue-900`}
+                          >
+                            <div className={`font-medium ${t.text}`}>{jingle.title}</div>
+                            <div className={`text-xs ${t.textSecondary}`}>Duur: {formatTimeShort(jingle.duration)}</div>
+                          </button>
+                        ))}
+                      </div>
+                      <div className={`p-6 border-t flex gap-3 ${t.border}`}>
+                        <button 
+                          onClick={() => setShowJingleEditor(false)} 
+                          className={`${t.buttonSecondary} flex-1 px-4 py-2 rounded-lg`}
+                        >
+                          Sluiten
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Print modal */}
+      {showPrintModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className={`${t.card} p-6 rounded-lg w-96 shadow-2xl`}>
+            <h3 className={`text-lg font-bold mb-4 ${t.text}`}>Printen</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="flex items-center mb-2">
+                  <input 
+                    type="radio" 
+                    checked={printMode === 'rundown'} 
+                    onChange={() => setPrintMode('rundown')} 
+                    className="mr-2" 
+                  />
+                  <span className={t.text}>Rundown (kort)</span>
+                </label>
+                <label className="flex items-center">
+                  <input 
+                    type="radio" 
+                    checked={printMode === 'full'} 
+                    onChange={() => setPrintMode('full')} 
+                    className="mr-2" 
+                  />
+                  <span className={t.text}>Volledig draaiboek</span>
+                </label>
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={printRundown} 
+                  className={`${t.button} px-4 py-2 rounded flex-1`}
+                >
+                  📄 Download TXT
+                </button>
+                <button 
+                  onClick={() => setShowPrintModal(false)} 
+                  className={`${t.buttonSecondary} px-4 py-2 rounded flex-1`}
+                >
+                  Annuleren
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Forms */}
       {showAddForm && (

@@ -15,7 +15,9 @@ const RundownList = ({
   handleDragStart,
   handleDragOver,
   handleDrop,
-  onInlineUpdate
+  onInlineUpdate,
+  readOnly = false,
+  canCheck = true,
 }) => {
   const [inlineEditId, setInlineEditId] = useState(null);
   const [inlineDraft, setInlineDraft] = useState({});
@@ -47,6 +49,11 @@ const RundownList = ({
     { value: 'checked', label: 'Checked' },
     { value: 'cancelled', label: 'Geannuleerd' }
   ]), []);
+
+  const visibleStatusOptions = useMemo(() => {
+    if (canCheck) return statusOptions;
+    return statusOptions.filter((opt) => opt.value !== 'checked');
+  }, [statusOptions, canCheck]);
 
   const getStatusStripClass = (status) => {
     switch (status) {
@@ -84,6 +91,7 @@ const RundownList = ({
   };
 
   const startInlineEdit = (item) => {
+    if (readOnly) return;
     setInlineEditId(item.id);
     setInlineDraft({
       title: item.title ?? '',
@@ -149,10 +157,10 @@ const RundownList = ({
           return (
             <div key={item.id}>
               <div
-                draggable
-                onDragStart={(e) => handleDragStart(e, item, idx)}
-                onDragOver={(e) => handleDragOver(e, idx)}
-                onDrop={(e) => handleDrop(e, idx)}
+                draggable={!readOnly}
+                onDragStart={(e) => !readOnly && handleDragStart(e, item, idx)}
+                onDragOver={(e) => !readOnly && handleDragOver(e, idx)}
+                onDrop={(e) => !readOnly && handleDrop(e, idx)}
                 className={`relative grid grid-cols-12 gap-2 px-3 py-2 items-center ${t.rowHover} ${isDragOver ? 'ring-2 ring-blue-500 ring-inset' : ''}`}
               >
                 {/* Status strip */}
@@ -208,7 +216,7 @@ const RundownList = ({
                       value={inlineDraft.status}
                       onChange={(e) => setInlineDraft({ ...inlineDraft, status: e.target.value })}
                     >
-                      {statusOptions.map(opt => (
+                      {visibleStatusOptions.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
                     </select>
@@ -257,30 +265,36 @@ const RundownList = ({
                     </>
                   ) : (
                     <>
-                      <button
-                        type="button"
-                        className={`text-[11px] px-2 py-1 rounded border ${t.border} ${t.textSecondary} ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-gray-700'}`}
-                        onClick={() => startInlineEdit(item)}
-                        title="Inline bewerken"
-                      >
-                        Inline
-                      </button>
-                      <button
-                        type="button"
-                        className={`text-[11px] px-2 py-1 rounded border ${t.border} ${t.textSecondary} ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-gray-700'}`}
-                        onClick={() => setEditingItem(item)}
-                        title="Open formulier"
-                      >
-                        Form
-                      </button>
-                      <button
-                        type="button"
-                        className="text-[11px] px-2 py-1 rounded border border-red-500 text-red-600 hover:bg-red-50"
-                        onClick={() => deleteItem(item.id)}
-                        title="Verwijderen"
-                      >
-                        Del
-                      </button>
+                      {!readOnly ? (
+                        <>
+                          <button
+                            type="button"
+                            className={`text-[11px] px-2 py-1 rounded border ${t.border} ${t.textSecondary} ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-gray-700'}`}
+                            onClick={() => startInlineEdit(item)}
+                            title="Inline bewerken"
+                          >
+                            Inline
+                          </button>
+                          <button
+                            type="button"
+                            className={`text-[11px] px-2 py-1 rounded border ${t.border} ${t.textSecondary} ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-gray-700'}`}
+                            onClick={() => setEditingItem(item)}
+                            title="Open formulier"
+                          >
+                            Form
+                          </button>
+                          <button
+                            type="button"
+                            className="text-[11px] px-2 py-1 rounded border border-red-500 text-red-600 hover:bg-red-50"
+                            onClick={() => deleteItem(item.id)}
+                            title="Verwijderen"
+                          >
+                            Del
+                          </button>
+                        </>
+                      ) : (
+                        <div className={`text-[11px] ${t.textSecondary}`}>—</div>
+                      )}
                     </>
                   )}
                 </div>

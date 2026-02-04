@@ -37,12 +37,18 @@ const RadioRundownPro = () => {
   const [editingRunbookName, setEditingRunbookName] = useState(null);
   
   // State voor klok weergave
-  const [showClock, setShowClock] = useState(true);
+  const [showClock, setShowClock] = useState(false);
   
-  // State voor item types
-  const [userItemTypes, setUserItemTypes] = useState([]);
-  const [showItemTypeManager, setShowItemTypeManager] = useState(false);
-  
+  // Program/team + rol state
+  const [programs, setPrograms] = useState([]);
+  const [currentProgramId, setCurrentProgramId] = useState(null);
+  const [myRole, setMyRole] = useState(null);
+  const [memberships, setMemberships] = useState([]);
+
+  const canEdit = myRole === 'admin' || myRole === 'chief_editor' || myRole === 'editor';
+  const canCheck = myRole === 'admin' || myRole === 'chief_editor';
+  const isAdmin = myRole === 'admin';
+
   // Feedback state
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
@@ -150,6 +156,39 @@ const RadioRundownPro = () => {
 
   const loadUserData = async (userId) => {
     try {
+      // Laad programs + mijn memberships
+      const { data: membershipData, error: membershipError } = await supabase
+        .from('program_memberships')
+        .select('program_id, role, programs ( id, name )')
+        .order('created_at', { ascending: true });
+
+      if (membershipError) {
+        console.error('Error loading memberships:', membershipError);
+      } else {
+        const normalized = (membershipData || []).map((m) => ({
+          program_id: m.program_id,
+          role: m.role,
+          program: m.programs,
+        }));
+        setMemberships(normalized);
+        const uniquePrograms = Array.from(
+          new Map(
+            normalized
+              .filter((m) => m.program)
+              .map((m) => [m.program.id, m.program])
+          ).values()
+        );
+
+        setPrograms(uniquePrograms);
+
+        // Kies default program (eerste membership)
+        const first = normalized.find((m) => m.program_id);
+        if (first?.program_id) {
+          setCurrentProgramId(first.program_id);
+          setMyRole(first.role || null);
+        }
+      }
+
       // Laad runbooks
       const { data: runbooksData } = await supabase
         .from('runbooks')
@@ -157,16 +196,12 @@ const RadioRundownPro = () => {
         .order('created_at', { ascending: false });
       if (runbooksData) {
         setRundowns(runbooksData);
-        if (runbooksData.length > 0) {
-          setCurrentRundownId(runbooksData[0].id);
-          loadRunbookItems(runbooksData[0].id);
-        }
       }
-      
+
       // Laad jingles
       const { data: jinglesData } = await supabase.from('jingles').select('*').eq('user_id', userId);
       if (jinglesData) setJingles(jinglesData);
-      
+
       // Laad item types
       const itemTypes = await loadUserItemTypes(userId);
       setUserItemTypes(itemTypes);
@@ -175,6 +210,24 @@ const RadioRundownPro = () => {
       console.error('Error loading user data:', error);
     }
   };
+
+  const visibleRundowns = React.useMemo(() => {
+    if (!currentProgramId) return rundowns;
+    // Fallback: als er runbooks zonder program_id bestaan, tonen we die ook.
+    return rundowns.filter((rb) => rb.program_id === currentProgramId || rb.program_id == null);
+  }, [rundowns, currentProgramId]);
+  
+  // Zorg dat er altijd een currentRundownId gekozen is binnen het zichtbare programma
+  useEffect(() => {
+    if (!visibleRundowns || visibleRundowns.length === 0) {
+      setCurrentRundownId(null);
+      setItems([]);
+      return;
+    }
+    if (!currentRundownId || !visibleRundowns.some((r) => r.id === currentRundownId)) {
+      setCurrentRundownId(visibleRundowns[0].id);
+    }
+  }, [visibleRundowns, currentRundownId]);
 
   const loadRunbookItems = async (runbookId) => {
     const { data } = await supabase.from('items').select('*').eq('runbook_id', runbookId).order('position');
@@ -205,6 +258,7 @@ const RadioRundownPro = () => {
   // Runbook management
   const createNewRunbook = async () => {
     if (!currentUser) return;
+    if (!canEdit) return;
     const { data } = await supabase.from('runbooks').insert([{
       user_id: currentUser.id, name: 'Nieuw Draaiboek', date: new Date().toISOString().split('T')[0]
     }]).select();
@@ -212,7 +266,8 @@ const RadioRundownPro = () => {
   };
 
   const duplicateRunbook = async (runbookId) => {
-    console.log('🔄 Duplicating runbook:', runbookId);
+    if (!canEdit) return;
+     console.log('🔄 Duplicating runbook:', runbookId);
     const original = rundowns.find(r => r.id === runbookId);
     if (!original) {
       console.error('❌ Original runbook not found');
@@ -297,19 +352,22 @@ const RadioRundownPro = () => {
   };
 
   const deleteRunbook = async (runbookId) => {
-    await supabase.from('runbooks').delete().eq('id', runbookId);
-    const updated = rundowns.filter(r => r.id !== runbookId);
-    setRundowns(updated);
-    if (currentRundownId === runbookId && updated.length > 0) setCurrentRundownId(updated[0].id);
+    if (!canEdit) return;
+     await supabase.from('runbooks').delete().eq('id', runbookId);
+     const updated = rundowns.filter(r => r.id !== runbookId);
+     setRundowns(updated);
+     if (currentRundownId === runbookId && updated.length > 0) setCurrentRundownId(updated[0].id);
   };
 
   const renameRunbook = async (runbookId, newName) => {
-    await supabase.from('runbooks').update({ name: newName }).eq('id', runbookId);
-    setRundowns(rundowns.map(r => r.id === runbookId ? { ...r, name: newName } : r));
+    if (!canEdit) return;
+     await supabase.from('runbooks').update({ name: newName }).eq('id', runbookId);
+     setRundowns(rundowns.map(r => r.id === runbookId ? { ...r, name: newName } : r));
   };
 
   // Item management
   const addItem = async (item) => {
+    if (!canEdit) return;
     if (!currentRundownId) return;
     const position = items.length;
 
@@ -1046,6 +1104,26 @@ const RadioRundownPro = () => {
         <div className={`${t.card} rounded-lg p-6 mb-6 shadow border ${t.border}`}>
           <div className="flex justify-between mb-4">
             <div className="flex items-center gap-4">
+              {/* Program selector (compact) */}
+              {programs.length > 0 && (
+                <select
+                  className={`text-sm px-3 py-2 rounded border ${t.input}`}
+                  value={currentProgramId || ''}
+                  onChange={(e) => handleSelectProgram(e.target.value || null)}
+                  title="Programma"
+                >
+                  {programs.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              )}
+
+              {myRole && (
+                <div className={`text-xs px-2 py-1 rounded border ${t.border} ${t.textSecondary}`} title="Jouw rol">
+                  Rol: {myRole}
+                </div>
+              )}
+
               {editingRunbookName === currentRundownId ? (
                 <input 
                   type="text" 
@@ -1059,7 +1137,7 @@ const RadioRundownPro = () => {
               ) : (
                 <h1 
                   className={`text-2xl font-bold cursor-pointer hover:underline ${t.text}`} 
-                  onClick={() => setEditingRunbookName(currentRundownId)}
+                  onClick={() => canEdit && setEditingRunbookName(currentRundownId)}
                 >
                   📻 {currentRunbook ? currentRunbook.name : 'Draaiboek'}
                 </h1>
@@ -1079,13 +1157,15 @@ const RadioRundownPro = () => {
               >
                 <MessageSquare size={20} />
               </button>
-              <button
-                onClick={() => { setShowAdminPanel(true); loadFeedbackForAdmin(); }}
-                className={`${t.buttonSecondary} p-2 rounded-lg`}
-                title="Admin console"
-              >
-                <Settings size={20} />
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => { setShowAdminPanel(true); loadFeedbackForAdmin(); }}
+                  className={`${t.buttonSecondary} p-2 rounded-lg`}
+                  title="Admin console"
+                >
+                  <Settings size={20} />
+                </button>
+              )}
               <button 
                 onClick={handleLogout} 
                 className={`${t.buttonSecondary} px-4 py-2 rounded-lg flex items-center gap-2`}
@@ -1095,315 +1175,412 @@ const RadioRundownPro = () => {
               </button>
             </div>
           </div>
-          
+
           {/* Action buttons */}
           <div className="flex gap-2 flex-wrap mb-3">
-            <button 
-              onClick={() => setShowRundownSelector(!showRundownSelector)} 
-              className={`${t.button} px-4 py-2 rounded-lg flex items-center gap-2`}
-            >
-              <FolderOpen size={16} />
-              Draaiboeken
-            </button>
-            <button 
-              onClick={createNewRunbook} 
-              className={`${t.button} px-4 py-2 rounded-lg flex items-center gap-2`}
-            >
-              <Plus size={16} />
-              Nieuw
-            </button>
-            <button 
-              onClick={() => setShowClock(!showClock)} 
-              className={`${t.button} px-4 py-2 rounded-lg flex items-center gap-2 text-sm`}
-            >
-              🕐 {showClock ? 'Verberg klok' : 'Toon klok'}
-            </button>
-            <button 
-              onClick={() => window.open('/clock.html', '_blank')} 
-              className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
-            >
-              📺 Externe klok
-            </button>
-            <button 
-              onClick={() => setShowLiveTime(!showLiveTime)} 
-              className={`${showLiveTime ? 'bg-green-500 hover:bg-green-600 text-white' : t.buttonSecondary} px-3 py-2 rounded-lg text-sm transition-colors`}
-              title="Live atoomtijd weergave"
-            >
-              🔴 Live
-            </button>
-            <button 
-              onClick={() => setShowPrintModal(true)} 
-              className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
-            >
-              🖨️ Print
-            </button>
-            <button 
-              onClick={() => setExpandedItems(new Set(items.map(i => i.id)))} 
-              className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
-            >
-              ⬇️ Alles uit
-            </button>
-            <button 
-              onClick={() => setExpandedItems(new Set())} 
-              className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
-            >
-              ⬆️ Alles in
-            </button>
-          </div>
-          
-          {/* Quick add buttons */}
-          <div className={`border-t pt-3 mb-2 ${t.border}`}>
-            <div className={`text-sm font-semibold mb-2 ${t.textSecondary}`}>ITEMS TOEVOEGEN:</div>
-            <div className="flex gap-2 flex-wrap items-center">
-              {userItemTypes.slice(0, 8).map(itemType => {
-                console.log('🔄 Rendering quick-add button for:', itemType);
-                return (
-                  <button 
-                    key={itemType.name}
-                    onClick={() => quickAdd(itemType.name)} 
-                    className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
-                    style={{ 
-                      borderLeft: `3px solid ${itemType.color}`,
-                    }}
-                  >
-                    {getItemTypeIcon(itemType.name)} {itemType.display_name}
-                  </button>
-                );
-              })}
-              {userItemTypes.length > 8 && (
-                <button 
-                  onClick={() => setShowAddForm(true)}
-                  className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
-                >
-                  + Meer...
-                </button>
-              )}
-              {/* Tandwieltje aan het einde van de knoppenrij */}
+            {/* Rundown selector knop vervalt: we tonen altijd de sidebar links */}
+            {canEdit && (
               <button 
-                onClick={() => setShowItemTypeManager(true)}
-                className={`${t.buttonSecondary} px-3 py-2 rounded text-sm flex items-center ml-auto`}
-                title="Item types beheren"
+                onClick={createNewRunbook} 
+                className={`${t.button} px-4 py-2 rounded-lg flex items-center gap-2`}
               >
-                <Settings size={16} />
+                <Plus size={16} />
+                Nieuw
               </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Rundown selector */}
-        {showRundownSelector && (
-          <div className={`${t.card} rounded-lg p-4 mb-6 shadow border ${t.border}`}>
-            <div className="flex justify-between items-center mb-3">
-              <h3 className={`font-bold ${t.text}`}>Mijn draaiboeken</h3>
-              <button 
-                onClick={downloadAllRundowns}
-                className={`${t.button} px-3 py-1 rounded-lg text-sm flex items-center gap-2`}
-                title="Download alle draaiboeken als TXT bestanden"
-              >
-                <Download size={16} />
-                Download alle
-              </button>
-            </div>
-            <div className="space-y-2">
-              {rundowns.map(rb => (
-                <div 
-                  key={rb.id} 
-                  className={`flex justify-between p-3 rounded ${rb.id === currentRundownId ? 'bg-blue-100 dark:bg-blue-900' : t.buttonSecondary}`}
-                >
-                  <button 
-                    onClick={() => { setCurrentRundownId(rb.id); setShowRundownSelector(false); }} 
-                    className="flex-1 text-left"
-                  >
-                    <div className={`font-medium ${t.text}`}>{rb.name}</div>
-                    <div className={`text-sm ${t.textSecondary}`}>{formatDate(rb.date)}</div>
-                  </button>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => duplicateRunbook(rb.id)} 
-                      className={`${t.buttonSecondary} p-2 rounded`}
-                    >
-                      <Copy size={16} />
-                    </button>
-                    <button 
-                      onClick={() => deleteRunbook(rb.id)} 
-                      className={`${t.buttonSecondary} p-2 rounded hover:bg-red-100`}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Main content - dynamische layout */}
-        <div className={`grid gap-6 ${showClock ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
-          {/* Linker kolom: Rundown met eventuele live tijd */}
-          <div className="space-y-6">
-            {/* Live tijd display binnen de rundown kolom als klok verborgen is */}
-            {showLiveTime && !showClock && (
-              <div className={`${t.card} rounded-lg p-4 shadow border ${t.border}`}>
-                <div className="flex items-center justify-center">
-                  <div className="text-center">
-                    <div className={`text-xs font-medium mb-1 ${t.textSecondary}`}>
-                      🔴 LIVE ATOOMTIJD
-                    </div>
-                    <div className={`text-4xl font-mono font-bold ${t.text} tracking-wider`} style={{
-                      fontFamily: 'Consolas, "Courier New", monospace',
-                      letterSpacing: '0.1em'
-                    }}>
-                      {liveTime || '00:00:00'}
-                    </div>
-                    <div className={`text-xs mt-1 ${t.textSecondary}`}>
-                      Nederlandse tijd (CET/CEST)
-                    </div>
-                  </div>
-                </div>
-              </div>
             )}
-            
-            {/* Rundown list */}
-            <div className={`${t.card} rounded-lg p-6 shadow border ${t.border}`}>
-              <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>Rundown</h2>
-              <RundownList 
-                items={items}
-                expandedItems={expandedItems}
-                dragOverIndex={dragOverIndex}
-                theme={theme}
-                formatTimeShort={formatTimeShort}
-                formatTime={formatTime}
-                getCumulativeTime={getCumulativeTime}
-                toggleExpanded={toggleExpanded}
-                setEditingItem={setEditingItem}
-                deleteItem={deleteItem}
-                handleDragStart={handleDragStart}
-                handleDragOver={handleDragOver}
-                handleDrop={handleDrop}
-                onInlineUpdate={(id, updated) => updateItem(id, updated)}
-              />
-            </div>
-          </div>
+             <button 
+               onClick={() => setShowClock(!showClock)} 
+               className={`${t.button} px-4 py-2 rounded-lg flex items-center gap-2 text-sm`}
+             >
+               🕐 {showClock ? 'Verberg klok' : 'Toon klok'}
+             </button>
+             <button 
+               onClick={() => window.open('/clock.html', '_blank')} 
+               className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
+             >
+               📺 Externe klok
+             </button>
+             <button 
+               onClick={() => setShowLiveTime(!showLiveTime)} 
+               className={`${showLiveTime ? 'bg-green-500 hover:bg-green-600 text-white' : t.buttonSecondary} px-3 py-2 rounded-lg text-sm transition-colors`}
+               title="Live atoomtijd weergave"
+             >
+               🔴 Live
+             </button>
+             <button 
+               onClick={() => setShowPrintModal(true)} 
+               className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
+             >
+               🖨️ Print
+             </button>
+             <button 
+               onClick={() => setExpandedItems(new Set(items.map(i => i.id)))} 
+               className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
+             >
+               ⬇️ Alles uit
+             </button>
+             <button 
+               onClick={() => setExpandedItems(new Set())} 
+               className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-sm`}
+             >
+               ⬆️ Alles in
+             </button>
+           </div>
+           
+           {/* Quick add buttons */}
+           <div className={`border-t pt-3 mb-2 ${t.border}`}>
+             <div className={`text-sm font-semibold mb-2 ${t.textSecondary}`}>ITEMS TOEVOEGEN:</div>
+             <div className="flex gap-2 flex-wrap items-center">
+               {userItemTypes.slice(0, 8).map(itemType => {
+                 console.log('🔄 Rendering quick-add button for:', itemType);
+                 return (
+                   <button 
+                     key={itemType.name}
+                     onClick={() => quickAdd(itemType.name)} 
+                     className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
+                     style={{ 
+                       borderLeft: `3px solid ${itemType.color}`,
+                     }}
+                    disabled={!canEdit}
+                    title={!canEdit ? 'Alleen-lezen (viewer)' : undefined}
+                   >
+                     {getItemTypeIcon(itemType.name)} {itemType.display_name}
+                   </button>
+                 );
+               })}
+               {userItemTypes.length > 8 && (
+                 <button 
+                   onClick={() => setShowAddForm(true)}
+                   className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
+                 >
+                   + Meer...
+                 </button>
+               )}
+               {/* Tandwieltje aan het einde van de knoppenrij */}
+               <button 
+                 onClick={() => setShowItemTypeManager(true)}
+                 className={`${t.buttonSecondary} px-3 py-2 rounded text-sm flex items-center ml-auto`}
+                 title="Item types beheren"
+               >
+                 <Settings size={16} />
+               </button>
+             </div>
+           </div>
+         </div>
 
-          {/* Rechter kolom: Klok met eventuele live tijd */}
-          {showClock && (
-            <div className="space-y-6">
-              {/* Live tijd display binnen de klok kolom als klok zichtbaar is */}
-              {showLiveTime && (
-                <div className={`${t.card} rounded-lg p-4 shadow border ${t.border}`}>
-                  <div className="flex items-center justify-center">
-                    <div className="text-center">
-                      <div className={`text-xs font-medium mb-1 ${t.textSecondary}`}>
-                        🔴 LIVE ATOOMTIJD
-                      </div>
-                      <div className={`text-4xl font-mono font-bold ${t.text} tracking-wider`} style={{
-                        fontFamily: 'Consolas, "Courier New", monospace',
-                        letterSpacing: '0.1em'
-                      }}>
-                        {liveTime || '00:00:00'}
-                      </div>
-                      <div className={`text-xs mt-1 ${t.textSecondary}`}>
-                        Nederlandse tijd (CET/CEST)
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Radio klok */}
-              <div className={`${t.card} rounded-lg p-6 shadow border ${t.border}`}>
-                <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>Klok</h2>
-                <Clock 
-                  items={items}
-                  currentTime={currentTime}
-                  isPlaying={isPlaying}
-                  setIsPlaying={setIsPlaying}
-                  theme={theme}
-                  formatTime={formatTime}
-                  formatTimeShort={formatTimeShort}
-                />
-              </div>
-            </div>
-          )}
-        </div>
+         {/* Rundown selector */}
+         {showRundownSelector && (
+           <div className={`${t.card} rounded-lg p-4 mb-6 shadow border ${t.border}`}>
+             <div className="flex justify-between items-center mb-3">
+               <h3 className={`font-bold ${t.text}`}>Mijn draaiboeken</h3>
+               <button 
+                 onClick={downloadAllRundowns}
+                 className={`${t.button} px-3 py-1 rounded-lg text-sm flex items-center gap-2`}
+                 title="Download alle draaiboeken als TXT bestanden"
+               >
+                 <Download size={16} />
+                 Download alle
+               </button>
+             </div>
+             <div className="space-y-2">
+               {visibleRundowns.map(rb => (
+                 <div 
+                   key={rb.id} 
+                   className={`flex justify-between p-3 rounded ${rb.id === currentRundownId ? 'bg-blue-100 dark:bg-blue-900' : t.buttonSecondary}`}
+                 >
+                   <button 
+                     onClick={() => { setCurrentRundownId(rb.id); setShowRundownSelector(false); }} 
+                     className="flex-1 text-left"
+                   >
+                     <div className={`font-medium ${t.text}`}>{rb.name}</div>
+                     <div className={`text-sm ${t.textSecondary}`}>{formatDate(rb.date)}</div>
+                   </button>
+                   <div className="flex gap-2">
+                     {canEdit && (
+                       <>
+                         <button 
+                           onClick={() => duplicateRunbook(rb.id)} 
+                           className={`${t.buttonSecondary} p-2 rounded`}
+                         >
+                           <Copy size={16} />
+                         </button>
+                         <button 
+                           onClick={() => deleteRunbook(rb.id)} 
+                           className={`${t.buttonSecondary} p-2 rounded hover:bg-red-100`}
+                         >
+                           <Trash2 size={16} />
+                         </button>
+                       </>
+                     )}
+                   </div>
+                 </div>
+               ))}
+             </div>
+           </div>
+         )}
 
-        {/* Jingle editor modal */}
-        {showJingleEditor && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className={`${t.card} rounded-lg w-full max-w-md shadow-2xl`}>
-              <div className={`p-6 border-b ${t.border}`}>
-                <h3 className={`text-lg font-bold ${t.text}`}>🔔 Jingles</h3>
-              </div>
-              <div className="p-6">
-                <div className="space-y-2 mb-4">
-                  {jingles.map(jingle => (
-                    <button 
-                      key={jingle.id} 
-                      onClick={() => { addJingle(jingle); setShowJingleEditor(false); }} 
-                      className={`w-full text-left px-4 py-3 rounded-lg ${t.buttonSecondary} hover:bg-blue-100 dark:hover:bg-blue-900`}
+         {/* Layout: sidebar + main */}
+         <div className="grid grid-cols-12 gap-6">
+          {/* Sidebar: programs + rundowns */}
+          <aside className={`col-span-12 lg:col-span-3 ${t.card} rounded-lg shadow border ${t.border} overflow-hidden`}>
+            <div className={`px-4 py-3 border-b ${t.border}`}>
+              <div className={`text-xs font-semibold uppercase tracking-wide ${t.textSecondary}`}>Programma</div>
+              <div className={`mt-1 text-sm font-semibold ${t.text}`}>{currentProgram?.name || '—'}</div>
+            </div>
+
+            <div className="p-3">
+              <div className="space-y-2">
+                {programs.map((p) => {
+                  const active = p.id === currentProgramId;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handleSelectProgram(p.id)}
+                      className={`w-full text-left px-3 py-2 rounded border ${t.border} ${active ? (theme === 'light' ? 'bg-blue-50 border-blue-200' : 'bg-blue-950/30 border-blue-800/40') : (theme === 'light' ? 'bg-white' : 'bg-gray-800')} ${t.text}`}
                     >
-                      <div className={`font-medium ${t.text}`}>{jingle.title}</div>
-                      <div className={`text-xs ${t.textSecondary}`}>Duur: {formatTimeShort(jingle.duration)}</div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-sm font-semibold truncate">{p.name}</div>
+                        {active ? <span className="text-[10px] text-blue-600">ACTIVE</span> : null}
+                      </div>
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-              <div className={`p-6 border-t flex gap-3 ${t.border}`}>
-                <button 
-                  onClick={() => setShowJingleEditor(false)} 
-                  className={`${t.buttonSecondary} flex-1 px-4 py-2 rounded-lg`}
+            </div>
+
+            <div className={`px-4 py-2 border-t border-b ${t.border}`}>
+              <div className="flex items-center justify-between">
+                <div className={`text-xs font-semibold uppercase tracking-wide ${t.textSecondary}`}>Rundowns</div>
+                <button
+                  type="button"
+                  onClick={downloadAllRundowns}
+                  className={`text-xs px-2 py-1 rounded border ${t.border} ${t.textSecondary} ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-gray-800'}`}
+                  title="Download alle draaiboeken"
                 >
-                  Sluiten
+                  <Download size={14} />
                 </button>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Print modal */}
-        {showPrintModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className={`${t.card} p-6 rounded-lg w-96 shadow-2xl`}>
-              <h3 className={`text-lg font-bold mb-4 ${t.text}`}>Printen</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="flex items-center mb-2">
-                    <input 
-                      type="radio" 
-                      checked={printMode === 'rundown'} 
-                      onChange={() => setPrintMode('rundown')} 
-                      className="mr-2" 
-                    />
-                    <span className={t.text}>Rundown (kort)</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input 
-                      type="radio" 
-                      checked={printMode === 'full'} 
-                      onChange={() => setPrintMode('full')} 
-                      className="mr-2" 
-                    />
-                    <span className={t.text}>Volledig draaiboek</span>
-                  </label>
-                </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={printRundown} 
-                    className={`${t.button} px-4 py-2 rounded flex-1`}
+            <div className="p-3 overflow-auto" style={{ maxHeight: '65vh' }}>
+              <div className="space-y-2">
+                {visibleRundowns.map((rb) => (
+                  <div
+                    key={rb.id}
+                    className={`flex items-center gap-2 rounded border ${t.border} ${rb.id === currentRundownId ? (theme === 'light' ? 'bg-blue-50 border-blue-200' : 'bg-blue-950/30 border-blue-800/40') : ''}`}
                   >
-                    📄 Download TXT
-                  </button>
-                  <button 
-                    onClick={() => setShowPrintModal(false)} 
-                    className={`${t.buttonSecondary} px-4 py-2 rounded flex-1`}
-                  >
-                    Annuleren
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      className="flex-1 text-left px-3 py-2 min-w-0"
+                      onClick={() => setCurrentRundownId(rb.id)}
+                    >
+                      <div className={`text-sm font-semibold truncate ${t.text}`}>{rb.name}</div>
+                      <div className={`text-[11px] ${t.textSecondary}`}>{formatDate(rb.date)}</div>
+                    </button>
+                    {canEdit && (
+                      <div className="flex items-center gap-1 pr-2">
+                        <button
+                          type="button"
+                          onClick={() => duplicateRunbook(rb.id)}
+                          className={`p-2 rounded ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-gray-800'}`}
+                          title="Dupliceren"
+                        >
+                          <Copy size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteRunbook(rb.id)}
+                          className={`p-2 rounded ${theme === 'light' ? 'hover:bg-red-50' : 'hover:bg-red-950/30'}`}
+                          title="Verwijderen"
+                        >
+                          <Trash2 size={14} className="text-red-600" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {visibleRundowns.length === 0 && (
+                  <div className={`text-sm ${t.textSecondary} p-2`}>Geen rundowns in dit programma.</div>
+                )}
               </div>
             </div>
+          </aside>
+
+          {/* Main content */}
+          <div className="col-span-12 lg:col-span-9">
+            {/* Main content - dynamische layout */}
+            <div className={`grid gap-6 ${showClock ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
+              {/* Linker kolom: Rundown met eventuele live tijd */}
+              <div className="space-y-6">
+                {/* Live tijd display binnen de rundown kolom als klok verborgen is */}
+                {showLiveTime && !showClock && (
+                  <div className={`${t.card} rounded-lg p-4 shadow border ${t.border}`}>
+                    <div className="flex items-center justify-center">
+                      <div className="text-center">
+                        <div className={`text-xs font-medium mb-1 ${t.textSecondary}`}>
+                          🔴 LIVE ATOOMTIJD
+                        </div>
+                        <div className={`text-4xl font-mono font-bold ${t.text} tracking-wider`} style={{
+                          fontFamily: 'Consolas, "Courier New", monospace',
+                          letterSpacing: '0.1em'
+                        }}>
+                          {liveTime || '00:00:00'}
+                        </div>
+                        <div className={`text-xs mt-1 ${t.textSecondary}`}>
+                          Nederlandse tijd (CET/CEST)
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Rundown list */}
+                <div className={`${t.card} rounded-lg p-6 shadow border ${t.border}`}>
+                  <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>Rundown</h2>
+                  <RundownList 
+                    items={items}
+                    expandedItems={expandedItems}
+                    dragOverIndex={dragOverIndex}
+                    theme={theme}
+                    formatTimeShort={formatTimeShort}
+                    formatTime={formatTime}
+                    getCumulativeTime={getCumulativeTime}
+                    toggleExpanded={toggleExpanded}
+                    setEditingItem={setEditingItem}
+                    deleteItem={deleteItem}
+                    handleDragStart={handleDragStart}
+                    handleDragOver={handleDragOver}
+                    handleDrop={handleDrop}
+                    onInlineUpdate={(id, updated) => updateItem(id, updated)}
+                    readOnly={!canEdit}
+                    canCheck={canCheck}
+                  />
+                </div>
+              </div>
+
+              {/* Rechter kolom: Klok met eventuele live tijd */}
+              {showClock && (
+                <div className="space-y-6">
+                  {/* Live tijd display binnen de klok kolom als klok zichtbaar is */}
+                  {showLiveTime && (
+                    <div className={`${t.card} rounded-lg p-4 shadow border ${t.border}`}>
+                      <div className="flex items-center justify-center">
+                        <div className="text-center">
+                          <div className={`text-xs font-medium mb-1 ${t.textSecondary}`}>
+                            🔴 LIVE ATOOMTIJD
+                          </div>
+                          <div className={`text-4xl font-mono font-bold ${t.text} tracking-wider`} style={{
+                            fontFamily: 'Consolas, "Courier New", monospace',
+                            letterSpacing: '0.1em'
+                          }}>
+                            {liveTime || '00:00:00'}
+                          </div>
+                          <div className={`text-xs mt-1 ${t.textSecondary}`}>
+                            Nederlandse tijd (CET/CEST)
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Radio klok */}
+                  <div className={`${t.card} rounded-lg p-6 shadow border ${t.border}`}>
+                    <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>Klok</h2>
+                    <Clock 
+                      items={items}
+                      currentTime={currentTime}
+                      isPlaying={isPlaying}
+                      setIsPlaying={setIsPlaying}
+                      theme={theme}
+                      formatTime={formatTime}
+                      formatTimeShort={formatTimeShort}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        )}
+        </div>
+
+         {/* Jingle editor modal */}
+         {showJingleEditor && (
+           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+             <div className={`${t.card} rounded-lg w-full max-w-md shadow-2xl`}>
+               <div className={`p-6 border-b ${t.border}`}>
+                 <h3 className={`text-lg font-bold ${t.text}`}>🔔 Jingles</h3>
+               </div>
+               <div className="p-6">
+                 <div className="space-y-2 mb-4">
+                   {jingles.map(jingle => (
+                     <button 
+                       key={jingle.id} 
+                       onClick={() => { addJingle(jingle); setShowJingleEditor(false); }} 
+                       className={`w-full text-left px-4 py-3 rounded-lg ${t.buttonSecondary} hover:bg-blue-100 dark:hover:bg-blue-900`}
+                     >
+                       <div className={`font-medium ${t.text}`}>{jingle.title}</div>
+                       <div className={`text-xs ${t.textSecondary}`}>Duur: {formatTimeShort(jingle.duration)}</div>
+                     </button>
+                   ))}
+                 </div>
+               </div>
+               <div className={`p-6 border-t flex gap-3 ${t.border}`}>
+                 <button 
+                   onClick={() => setShowJingleEditor(false)} 
+                   className={`${t.buttonSecondary} flex-1 px-4 py-2 rounded-lg`}
+                 >
+                   Sluiten
+                 </button>
+               </div>
+             </div>
+           </div>
+         )}
+
+         {/* Print modal */}
+         {showPrintModal && (
+           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+             <div className={`${t.card} p-6 rounded-lg w-96 shadow-2xl`}>
+               <h3 className={`text-lg font-bold mb-4 ${t.text}`}>Printen</h3>
+               <div className="space-y-4">
+                 <div>
+                   <label className="flex items-center mb-2">
+                     <input 
+                       type="radio" 
+                       checked={printMode === 'rundown'} 
+                       onChange={() => setPrintMode('rundown')} 
+                       className="mr-2" 
+                     />
+                     <span className={t.text}>Rundown (kort)</span>
+                   </label>
+                   <label className="flex items-center">
+                     <input 
+                       type="radio" 
+                       checked={printMode === 'full'} 
+                       onChange={() => setPrintMode('full')} 
+                       className="mr-2" 
+                     />
+                     <span className={t.text}>Volledig draaiboek</span>
+                   </label>
+                 </div>
+                 <div className="flex gap-2">
+                   <button 
+                     onClick={printRundown} 
+                     className={`${t.button} px-4 py-2 rounded flex-1`}
+                   >
+                     📄 Download TXT
+                   </button>
+                   <button 
+                     onClick={() => setShowPrintModal(false)} 
+                     className={`${t.buttonSecondary} px-4 py-2 rounded flex-1`}
+                   >
+                     Annuleren
+                   </button>
+                 </div>
+               </div>
+             </div>
+           </div>
+         )}
       </div>
 
       {/* Forms */}
@@ -1431,8 +1608,6 @@ const RadioRundownPro = () => {
           setIsSearchingSpotify={setIsSearchingSpotify}
         />
       )}
-
-      {/* Item Type Manager */}
       {showItemTypeManager && (
         <ItemTypeManager
           currentUser={currentUser}
@@ -1451,6 +1626,16 @@ const RadioRundownPro = () => {
                 <div className={`text-lg font-bold ${t.text}`}>Admin console</div>
                 <div className={`text-xs ${t.textSecondary}`}>Feedback viewer (max 200)</div>
               </div>
+              <button
+                onClick={() => { setShowAdminPanel(false); setSelectedFeedbackId(null); }}
+                className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
+                title="Sluiten"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-12 h-full">
               <div className="flex items-center gap-2">
                 <button
                   className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
@@ -1459,33 +1644,11 @@ const RadioRundownPro = () => {
                 >
                   ↻ Refresh
                 </button>
-                <button
-                  className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
-                  onClick={() => setShowAdminPanel(false)}
-                >
-                  Sluiten
-                </button>
               </div>
-            </div>
-
-            <div className="grid grid-cols-12 h-full">
-              {/* Left: list */}
               <div className={`col-span-12 md:col-span-5 border-r ${t.border} overflow-auto`}>
                 <div className={`px-4 py-2 text-xs font-semibold ${t.textSecondary} border-b ${t.border}`}>
                   Ingekomen feedback
                 </div>
-
-                {adminFeedbackLoading && (
-                  <div className={`p-4 text-sm ${t.textSecondary}`}>Laden…</div>
-                )}
-                {adminFeedbackError && (
-                  <div className="p-4 text-sm text-red-500">{adminFeedbackError}</div>
-                )}
-
-                {!adminFeedbackLoading && !adminFeedbackError && adminFeedback.length === 0 && (
-                  <div className={`p-4 text-sm ${t.textSecondary}`}>Nog geen feedback.</div>
-                )}
-
                 <div className="divide-y">
                   {adminFeedback.map((f) => (
                     <button
@@ -1503,46 +1666,29 @@ const RadioRundownPro = () => {
                   ))}
                 </div>
               </div>
-
-              {/* Right: details */}
               <div className="col-span-12 md:col-span-7 overflow-auto">
-                <div className={`px-4 py-2 text-xs font-semibold ${t.textSecondary} border-b ${t.border}`}>
-                  Details
-                </div>
-
-                {(() => {
-                  const selected = adminFeedback.find((f) => f.id === selectedFeedbackId);
-                  if (!selected) {
-                    return <div className={`p-4 text-sm ${t.textSecondary}`}>Selecteer links een item.</div>;
-                  }
-
-                  return (
-                    <div className="p-4 space-y-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <div className={`text-lg font-bold ${t.text}`}>{(selected.type || 'suggestion').toUpperCase()}</div>
-                          <div className={`text-xs ${t.textSecondary}`}>{selected.created_at ? new Date(selected.created_at).toLocaleString() : ''}</div>
-                          <div className={`text-xs mt-1 ${t.textSecondary}`}>Van: {selected.user_email || selected.user_id || 'onbekend'}</div>
-                        </div>
-                        <button
-                          className="border border-red-500 text-red-600 hover:bg-red-50 px-3 py-2 rounded text-sm"
-                          onClick={() => deleteFeedbackAsAdmin(selected.id)}
-                        >
-                          Verwijderen
-                        </button>
-                      </div>
-
+                {selectedFeedbackId ? (
+                  <div className="p-4">
+                    {adminFeedbackLoading && (
+                      <div className={`p-4 text-sm ${t.textSecondary}`}>Laden…</div>
+                    )}
+                    {adminFeedbackError && (
+                      <div className={`p-4 text-sm text-red-500`}>{adminFeedbackError}</div>
+                    )}
+                    {!adminFeedbackLoading && !adminFeedbackError && (
                       <div>
-                        <div className={`text-xs font-semibold mb-1 ${t.textSecondary}`}>Bericht</div>
-                        <div className={`text-sm whitespace-pre-wrap ${t.text}`}>{selected.message || ''}</div>
+                        <div className={`text-lg font-bold ${t.text}`}>{(selected.type || 'suggestion').toUpperCase()}</div>
+                        <div className={`text-xs ${t.textSecondary}`}>{selected.created_at ? new Date(selected.created_at).toLocaleString() : ''}</div>
+                        <div className={`text-xs mt-1 ${t.textSecondary}`}>Van: {selected.user_email || selected.user_id || 'onbekend'}</div>
+                        <div className="mt-4">
+                          <div className={`text-sm ${t.text} whitespace-pre-line`}>{selected.message || ''}</div>
+                        </div>
                       </div>
-
-                      <div className={`text-xs ${t.textSecondary}`}>
-                        ID: <span className="font-mono">{selected.id}</span>
-                      </div>
-                    </div>
-                  );
-                })()}
+                    )}
+                  </div>
+                ) : (
+                  <div className={`p-4 text-sm ${t.textSecondary}`}>Selecteer links een item.</div>
+                )}
               </div>
             </div>
           </div>

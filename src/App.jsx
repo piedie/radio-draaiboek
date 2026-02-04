@@ -226,6 +226,18 @@ const RadioRundownPro = () => {
     return programs.find((p) => p.id === currentProgramId) || null;
   }, [programs, currentProgramId]);
   
+  const handleSelectProgram = (programId) => {
+    const nextId = programId || null;
+    setCurrentProgramId(nextId);
+
+    const membership = (memberships || []).find((m) => m.program_id === nextId) || null;
+    setMyRole(membership?.role || null);
+
+    // Reset rundown selectie; effect op `visibleRundowns` kiest daarna automatisch een geldige rundown
+    setCurrentRundownId(null);
+    setItems([]);
+  };
+  
   // Zorg dat er altijd een currentRundownId gekozen is binnen het zichtbare programma
   useEffect(() => {
     if (!visibleRundowns || visibleRundowns.length === 0) {
@@ -1757,6 +1769,7 @@ const RadioRundownPro = () => {
               <button
                 type="button"
                 onClick={() => setShowFeedbackModal(true)}
+
                 className={`text-xs px-3 py-1.5 rounded border ${t.border} ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-gray-800'}`}
                 title="Feedback doorgeven"
               >

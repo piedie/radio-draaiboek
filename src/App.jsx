@@ -38,6 +38,10 @@ const RadioRundownPro = () => {
   
   // State voor klok weergave
   const [showClock, setShowClock] = useState(false);
+
+  // State voor item types
+  const [userItemTypes, setUserItemTypes] = useState([]);
+  const [showItemTypeManager, setShowItemTypeManager] = useState(false);
   
   // Program/team + rol state
   const [programs, setPrograms] = useState([]);

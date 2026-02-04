@@ -220,6 +220,11 @@ const RadioRundownPro = () => {
     // Fallback: als er runbooks zonder program_id bestaan, tonen we die ook.
     return rundowns.filter((rb) => rb.program_id === currentProgramId || rb.program_id == null);
   }, [rundowns, currentProgramId]);
+
+  const currentProgram = React.useMemo(() => {
+    if (!currentProgramId) return null;
+    return programs.find((p) => p.id === currentProgramId) || null;
+  }, [programs, currentProgramId]);
   
   // Zorg dat er altijd een currentRundownId gekozen is binnen het zichtbare programma
   useEffect(() => {
@@ -264,7 +269,8 @@ const RadioRundownPro = () => {
     if (!currentUser) return;
     if (!canEdit) return;
     const { data } = await supabase.from('runbooks').insert([{
-      user_id: currentUser.id, name: 'Nieuw Draaiboek', date: new Date().toISOString().split('T')[0]
+      user_id: currentUser.id, name: 'Nieuw Draaiboek', date: new Date().toISOString().split('T')[0],
+      program_id: currentProgramId || null,
     }]).select();
     if (data) { setRundowns([data[0], ...rundowns]); setCurrentRundownId(data[0].id); }
   };
@@ -283,7 +289,8 @@ const RadioRundownPro = () => {
       const { data: newRunbook, error: runbookError } = await supabase.from('runbooks').insert([{
         user_id: currentUser.id, 
         name: original.name + ' (kopie)', 
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
+        program_id: original.program_id ?? currentProgramId ?? null,
       }]).select();
       
       if (runbookError) throw runbookError;
@@ -1762,7 +1769,7 @@ const RadioRundownPro = () => {
         </div>
       </footer>
     </div>
-  );
+   );
 };
 
 export default RadioRundownPro;

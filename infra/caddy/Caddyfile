@@ -1,6 +1,6 @@
 {
   # Optional: email for Let's Encrypt notifications
-  # email you@example.com
+  # email pjansen@landstede.nl
 }
 
 # --- Draaiboek app (statische build) ---

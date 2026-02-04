@@ -55,6 +55,49 @@ const RadioRundownPro = () => {
   const [adminFeedbackError, setAdminFeedbackError] = useState(null);
   const [selectedFeedbackId, setSelectedFeedbackId] = useState(null);
 
+  // Admin helpers
+  const loadFeedbackForAdmin = async () => {
+    try {
+      setAdminFeedbackLoading(true);
+      setAdminFeedbackError(null);
+
+      const { data, error } = await supabase
+        .from('feedback')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+      if (error) throw error;
+
+      setAdminFeedback(data || []);
+      // Houd selectie zo mogelijk stabiel
+      if (selectedFeedbackId && !(data || []).some((f) => f.id === selectedFeedbackId)) {
+        setSelectedFeedbackId(null);
+      }
+    } catch (e) {
+      console.error('loadFeedbackForAdmin error:', e);
+      setAdminFeedbackError(e?.message || 'Onbekende fout bij laden van feedback');
+    } finally {
+      setAdminFeedbackLoading(false);
+    }
+  };
+
+  const deleteFeedbackAsAdmin = async (feedbackId) => {
+    if (!feedbackId) return;
+    if (!window.confirm('Feedback verwijderen?')) return;
+
+    try {
+      const { error } = await supabase.from('feedback').delete().eq('id', feedbackId);
+      if (error) throw error;
+
+      setAdminFeedback((prev) => prev.filter((f) => f.id !== feedbackId));
+      if (selectedFeedbackId === feedbackId) setSelectedFeedbackId(null);
+    } catch (e) {
+      console.error('deleteFeedbackAsAdmin error:', e);
+      alert('Verwijderen mislukt: ' + (e?.message || 'Onbekende fout'));
+    }
+  };
+
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [showJingleEditor, setShowJingleEditor] = useState(false);
@@ -1564,6 +1607,30 @@ const RadioRundownPro = () => {
           </div>
         </div>
       )}
+
+      {/* Footer (ingelogde view) */}
+      <footer className={`mt-6 py-3 border-t ${t.border} ${t.bg}`}>
+        <div className="max-w-7xl mx-auto px-2">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+            <div className={`text-xs ${t.textSecondary}`}>
+              © {COPYRIGHT_YEAR} Landstede MBO. Alle rechten voorbehouden.
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowFeedbackModal(true)}
+                className={`text-xs px-3 py-1.5 rounded border ${t.border} ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-gray-800'}`}
+                title="Feedback doorgeven"
+              >
+                Feedback
+              </button>
+              <div className={`text-xs ${t.textSecondary}`}>Radio Rundown Pro v{APP_VERSION}</div>
+              <div className={`text-xs ${t.textSecondary}`}>Build: {BUILD_DATE}</div>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

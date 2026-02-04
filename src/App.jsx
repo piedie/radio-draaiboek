@@ -1,6 +1,6 @@
 // src/App.jsx - Radio Rundown Pro v2.2 - Met Custom Item Types
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Copy, LogOut, Moon, Sun, FolderOpen, Trash2, Settings, MessageSquare, Download } from 'lucide-react';
+import { Plus, Copy, LogOut, Moon, Sun, FolderOpen, Trash2, Settings, MessageSquare, Download, X } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import Clock from './components/Clock';
 import ItemForm from './components/ItemForm';
@@ -1670,29 +1670,41 @@ const RadioRundownPro = () => {
                 </div>
               </div>
               <div className="col-span-12 md:col-span-7 overflow-auto">
-                {selectedFeedbackId ? (
-                  <div className="p-4">
-                    {adminFeedbackLoading && (
-                      <div className={`p-4 text-sm ${t.textSecondary}`}>Laden…</div>
-                    )}
-                    {adminFeedbackError && (
-                      <div className={`p-4 text-sm text-red-500`}>{adminFeedbackError}</div>
-                    )}
-                    {!adminFeedbackLoading && !adminFeedbackError && (
-                      <div>
-                        <div className={`text-lg font-bold ${t.text}`}>{(selected.type || 'suggestion').toUpperCase()}</div>
-                        <div className={`text-xs ${t.textSecondary}`}>{selected.created_at ? new Date(selected.created_at).toLocaleString() : ''}</div>
-                        <div className={`text-xs mt-1 ${t.textSecondary}`}>Van: {selected.user_email || selected.user_id || 'onbekend'}</div>
-                        <div className="mt-4">
-                          <div className={`text-sm ${t.text} whitespace-pre-line`}>{selected.message || ''}</div>
+                {(() => {
+                  const selected = selectedFeedbackId
+                    ? adminFeedback.find((f) => f.id === selectedFeedbackId)
+                    : null;
+
+                  if (!selectedFeedbackId) {
+                    return <div className={`p-4 text-sm ${t.textSecondary}`}>Selecteer links een item.</div>;
+                  }
+
+                  if (!selected) {
+                    return <div className={`p-4 text-sm ${t.textSecondary}`}>Niet gevonden.</div>;
+                  }
+
+                  return (
+                    <div className="p-4">
+                      {adminFeedbackLoading && (
+                        <div className={`p-4 text-sm ${t.textSecondary}`}>Laden…</div>
+                      )}
+                      {adminFeedbackError && (
+                        <div className="p-4 text-sm text-red-500">{adminFeedbackError}</div>
+                      )}
+                      {!adminFeedbackLoading && !adminFeedbackError && (
+                        <div>
+                          <div className={`text-lg font-bold ${t.text}`}>{(selected.type || 'suggestion').toUpperCase()}</div>
+                          <div className={`text-xs ${t.textSecondary}`}>{selected.created_at ? new Date(selected.created_at).toLocaleString() : ''}</div>
+                          <div className={`text-xs mt-1 ${t.textSecondary}`}>Van: {selected.user_email || selected.user_id || 'onbekend'}</div>
+                          <div className="mt-4">
+                            <div className={`text-sm ${t.text} whitespace-pre-line`}>{selected.message || ''}</div>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className={`p-4 text-sm ${t.textSecondary}`}>Selecteer links een item.</div>
-                )}
-              </div>
+                      )}
+                    </div>
+                  );
+                })()}
+               </div>
             </div>
           </div>
         </div>

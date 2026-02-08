@@ -48,12 +48,10 @@ const RadioRundownPro = () => {
   const [currentProgramId, setCurrentProgramId] = useState(null);
   const [myRole, setMyRole] = useState(null);
   const [memberships, setMemberships] = useState([]);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
-  const effectiveRole = isSuperAdmin ? 'admin' : myRole;
-  const canEdit = effectiveRole === 'admin' || effectiveRole === 'chief_editor' || effectiveRole === 'editor';
-  const canCheck = effectiveRole === 'admin' || effectiveRole === 'chief_editor';
-  const isAdmin = effectiveRole === 'admin';
+  const canEdit = myRole === 'admin' || myRole === 'chief_editor' || myRole === 'editor';
+  const canCheck = myRole === 'admin' || myRole === 'chief_editor';
+  const isAdmin = myRole === 'admin';
 
   // Feedback state
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -314,53 +312,58 @@ const RadioRundownPro = () => {
 
   const loadUserData = async (userId) => {
     try {
-      // Laad superadmin flag
-      try {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id, is_superadmin')
-          .eq('id', userId)
-          .maybeSingle();
-        if (!profileError) setIsSuperAdmin(Boolean(profile?.is_superadmin));
-      } catch (e) {
-        console.warn('Could not load is_superadmin from profiles:', e);
-      }
-
       // Laad programs + mijn memberships
       const { data: membershipData, error: membershipError } = await supabase
         .from('program_memberships')
-        .select('program_id, role, programs ( id, name )')
+        // Belangrijk: altijd filteren op user_id, anders kan dit (heel) traag worden onder RLS.
+        .select('program_id, role, created_at')
+        .eq('user_id', userId)
         .order('created_at', { ascending: true });
 
       if (membershipError) {
         console.error('Error loading memberships:', membershipError);
-        // Als memberships niet laden door RLS/policy: zorg dat UI niet stil leeg blijft.
-        setMemberships([]);
-        setPrograms([]);
-        setCurrentProgramId(null);
-        setMyRole(null);
       } else {
         const normalized = (membershipData || []).map((m) => ({
           program_id: m.program_id,
           role: m.role,
-          program: m.programs,
+          program: null,
         }));
-        setMemberships(normalized);
+
+        // Laad de programs in een aparte query (sneller en minder complex dan een nested select).
+        const programIds = Array.from(new Set(normalized.map((m) => m.program_id).filter(Boolean)));
+        let programsById = {};
+        if (programIds.length > 0) {
+          const { data: programsData, error: programsError } = await supabase
+            .from('programs')
+            .select('id, name')
+            .in('id', programIds);
+
+          if (programsError) {
+            console.error('Error loading programs:', programsError);
+          } else {
+            programsById = Object.fromEntries((programsData || []).map((p) => [p.id, p]));
+          }
+        }
+
+        const normalizedWithProgram = normalized.map((m) => ({
+          ...m,
+          program: programsById[m.program_id] || null,
+        }));
+
+        setMemberships(normalizedWithProgram);
         const uniquePrograms = Array.from(
           new Map(
-            normalized
+            normalizedWithProgram
               .filter((m) => m.program)
               .map((m) => [m.program.id, m.program])
           ).values()
         );
-
         setPrograms(uniquePrograms);
 
         // Kies default program (eerste membership)
-        const first = normalized.find((m) => m.program_id);
+        const first = normalizedWithProgram.find((m) => m.program_id);
         if (first?.program_id) {
           setCurrentProgramId(first.program_id);
-          // superadmin blijft admin, maar we bewaren myRole per programma voor UI
           setMyRole(first.role || null);
         }
       }
@@ -452,28 +455,11 @@ const RadioRundownPro = () => {
   const createNewRunbook = async () => {
     if (!currentUser) return;
     if (!canEdit) return;
-    try {
-      const payload = {
-        user_id: currentUser.id,
-        name: 'Nieuw Draaiboek',
-        date: new Date().toISOString().split('T')[0],
-        program_id: currentProgramId || null,
-      };
-
-      const { data, error } = await supabase.from('runbooks').insert([payload]).select();
-      if (error) {
-        console.error('createNewRunbook error:', error);
-        alert('Nieuw draaiboek aanmaken mislukt: ' + (error.message || 'Onbekende fout'));
-        return;
-      }
-      if (data) {
-        setRundowns([data[0], ...rundowns]);
-        setCurrentRundownId(data[0].id);
-      }
-    } catch (e) {
-      console.error('createNewRunbook unexpected error:', e);
-      alert('Nieuw draaiboek aanmaken mislukt: ' + (e?.message || 'Onbekende fout'));
-    }
+    const { data } = await supabase.from('runbooks').insert([{
+      user_id: currentUser.id, name: 'Nieuw Draaiboek', date: new Date().toISOString().split('T')[0],
+      program_id: currentProgramId || null,
+    }]).select();
+    if (data) { setRundowns([data[0], ...rundowns]); setCurrentRundownId(data[0].id); }
   };
 
   const duplicateRunbook = async (runbookId) => {

@@ -188,14 +188,31 @@ const RadioRundownPro = () => {
       setAdminMembersLoading(true);
       setAdminMembersError(null);
 
-      const { data, error } = await supabase
+      const { data: membershipsData, error: membershipsError } = await supabase
         .from('program_memberships')
-        .select('id, program_id, user_id, role, created_at, profiles:profiles ( id, name, email )')
+        .select('id, program_id, user_id, role, created_at')
         .eq('program_id', currentProgramId)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
-      setAdminMembers(data || []);
+      if (membershipsError) throw membershipsError;
+
+      const ids = Array.from(new Set((membershipsData || []).map((m) => m.user_id).filter(Boolean)));
+      let profilesById = {};
+      if (ids.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, name, email')
+          .in('id', ids);
+
+        if (profilesError) throw profilesError;
+        profilesById = Object.fromEntries((profilesData || []).map((p) => [p.id, p]));
+      }
+
+      const merged = (membershipsData || []).map((m) => ({
+        ...m,
+        profiles: profilesById[m.user_id] || null,
+      }));
+      setAdminMembers(merged);
     } catch (e) {
       console.error('loadMembersForAdmin error:', e);
       setAdminMembersError(e?.message || 'Onbekende fout bij laden van members');

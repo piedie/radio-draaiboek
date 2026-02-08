@@ -190,7 +190,7 @@ const RadioRundownPro = () => {
 
       const { data, error } = await supabase
         .from('program_memberships')
-        .select('id, program_id, user_id, role, created_at')
+        .select('id, program_id, user_id, role, created_at, profiles:profiles ( id, name, email )')
         .eq('program_id', currentProgramId)
         .order('created_at', { ascending: true });
 
@@ -1793,7 +1793,11 @@ const RadioRundownPro = () => {
                   </button>
                 </div>
                 <button
+
                   onClick={() => { setShowAdminPanel(false); setSelectedFeedbackId(null); }}
+
+
+
                   className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
                  
                   title="Sluiten"
@@ -1904,38 +1908,40 @@ const RadioRundownPro = () => {
                       </div>
                       <div className={`rounded border ${t.border} overflow-hidden`}>
                         <div className={`grid grid-cols-12 gap-2 px-3 py-2 text-[11px] font-semibold uppercase ${t.headerBg} ${t.textSecondary}`}>
-                          <div className="col-span-6">User ID</div>
+                          <div className="col-span-5">Naam</div>
+                          <div className="col-span-4">Email</div>
                           <div className="col-span-3">Role</div>
-                          <div className="col-span-3 text-right">Acties</div>
+                          <div className="col-span-0"></div>
                         </div>
                         <div className={`divide-y ${t.divider}`}>
                           {adminMembers.map((m) => (
                             <div key={m.id} className="grid grid-cols-12 gap-2 px-3 py-2 items-center">
-                              <div className={`col-span-6 text-xs font-mono ${t.text}`}>{m.user_id}</div>
-                              <div className="col-span-3">
-                                <select
-                                  className={`w-full text-xs px-2 py-1 rounded border ${t.input}`}
-                                  value={m.role}
-                                  onChange={(e) => updateMemberRoleAsAdmin(m.id, e.target.value)}
-                                >
-                                  <option value="viewer">viewer</option>
-                                  <option value="editor">editor</option>
-                                  <option value="chief_editor">chief_editor</option>
-                                  <option value="admin">admin</option>
-                                </select>
-                              </div>
-                              <div className="col-span-3 flex justify-end">
-                                <button
-                                  className="text-[11px] px-2 py-1 rounded border border-red-500 text-red-600 hover:bg-red-50"
-                                  onClick={() => removeMemberAsAdmin(m.id)}
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                              <div className={`col-span-5 text-xs ${t.text}`}>{m.profiles?.name || '—'}</div>
+                              <div className={`col-span-4 text-xs ${t.textSecondary}`}>{m.profiles?.email || '—'}</div>
+                               <div className="col-span-3">
+                                 <select
+                                   className={`w-full text-xs px-2 py-1 rounded border ${t.input}`}
+                                   value={m.role}
+                                   onChange={(e) => updateMemberRoleAsAdmin(m.id, e.target.value)}
+                                 >
+                                   <option value="viewer">viewer</option>
+                                   <option value="editor">editor</option>
+                                   <option value="chief_editor">chief_editor</option>
+                                   <option value="admin">admin</option>
+                                 </select>
+                               </div>
+                               <div className="col-span-12 flex justify-end">
+                                 <button
+                                   className="text-[11px] px-2 py-1 rounded border border-red-500 text-red-600 hover:bg-red-50"
+                                   onClick={() => removeMemberAsAdmin(m.id)}
+                                 >
+                                   Remove
+                                 </button>
+                               </div>
+                             </div>
+                           ))}
+                         </div>
+                       </div>
                     </div>
                   )}
                 </div>

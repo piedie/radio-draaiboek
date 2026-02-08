@@ -102,6 +102,49 @@ const RadioRundownPro = () => {
     }
   };
 
+  // Admin helpers
+  const loadFeedbackForAdmin = async () => {
+    try {
+      setAdminFeedbackLoading(true);
+      setAdminFeedbackError(null);
+
+      const { data, error } = await supabase
+        .from('feedback')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+      if (error) throw error;
+
+      setAdminFeedback(data || []);
+      // Houd selectie zo mogelijk stabiel
+      if (selectedFeedbackId && !(data || []).some((f) => f.id === selectedFeedbackId)) {
+        setSelectedFeedbackId(null);
+      }
+    } catch (e) {
+      console.error('loadFeedbackForAdmin error:', e);
+      setAdminFeedbackError(e?.message || 'Onbekende fout bij laden van feedback');
+    } finally {
+      setAdminFeedbackLoading(false);
+    }
+  };
+
+  const deleteFeedbackAsAdmin = async (feedbackId) => {
+    if (!feedbackId) return;
+    if (!window.confirm('Feedback verwijderen?')) return;
+
+    try {
+      const { error } = await supabase.from('feedback').delete().eq('id', feedbackId);
+      if (error) throw error;
+
+      setAdminFeedback((prev) => prev.filter((f) => f.id !== feedbackId));
+      if (selectedFeedbackId === feedbackId) setSelectedFeedbackId(null);
+    } catch (e) {
+      console.error('deleteFeedbackAsAdmin error:', e);
+      alert('Verwijderen mislukt: ' + (e?.message || 'Onbekende fout'));
+    }
+  };
+
   const loadMembersForAdmin = async () => {
     if (!currentProgramId) {
       setAdminMembers([]);
@@ -125,22 +168,6 @@ const RadioRundownPro = () => {
       setAdminMembersError(e?.message || 'Onbekende fout bij laden van members');
     } finally {
       setAdminMembersLoading(false);
-    }
-  };
-
-  const deleteFeedbackAsAdmin = async (feedbackId) => {
-    if (!feedbackId) return;
-    if (!window.confirm('Feedback verwijderen?')) return;
-
-    try {
-      const { error } = await supabase.from('feedback').delete().eq('id', feedbackId);
-      if (error) throw error;
-
-      setAdminFeedback((prev) => prev.filter((f) => f.id !== feedbackId));
-      if (selectedFeedbackId === feedbackId) setSelectedFeedbackId(null);
-    } catch (e) {
-      console.error('deleteFeedbackAsAdmin error:', e);
-      alert('Verwijderen mislukt: ' + (e?.message || 'Onbekende fout'));
     }
   };
 
@@ -1749,7 +1776,7 @@ const RadioRundownPro = () => {
                         return <div className={`p-4 text-sm ${t.textSecondary}`}>Selecteer links een item.</div>;
                       }
 
-                      if (!selected) {
+ if (!selected) {
                         return <div className={`p-4 text-sm ${t.textSecondary}`}>Niet gevonden.</div>;
                       }
 

@@ -326,7 +326,7 @@ const RadioRundownPro = () => {
         console.warn('Could not load is_superadmin from profiles:', e);
       }
 
-       // Laad programs + mijn memberships
+      // Laad programs + mijn memberships
       const { data: membershipData, error: membershipError } = await supabase
         .from('program_memberships')
         .select('program_id, role, programs ( id, name )')
@@ -334,6 +334,11 @@ const RadioRundownPro = () => {
 
       if (membershipError) {
         console.error('Error loading memberships:', membershipError);
+        // Als memberships niet laden door RLS/policy: zorg dat UI niet stil leeg blijft.
+        setMemberships([]);
+        setPrograms([]);
+        setCurrentProgramId(null);
+        setMyRole(null);
       } else {
         const normalized = (membershipData || []).map((m) => ({
           program_id: m.program_id,

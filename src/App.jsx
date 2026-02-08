@@ -35,9 +35,17 @@ const RadioRundownPro = () => {
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printMode, setPrintMode] = useState('rundown');
   const [editingRunbookName, setEditingRunbookName] = useState(null);
-  
-  // State voor klok weergave
-  const [showClock, setShowClock] = useState(false);
+
+  // Drag & drop
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+
+  // Jingles
+  const [showJingleEditor, setShowJingleEditor] = useState(false);
+  const [jingles, setJingles] = useState([]);
+
+  // Spotify search state
+  const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
 
   // Live tijd (NTP) weergave
   const [showLiveTime, setShowLiveTime] = useState(false);
@@ -1792,7 +1800,7 @@ const RadioRundownPro = () => {
           <div className={`${t.card} p-6 rounded-lg w-96 shadow-2xl`}>
             <h3 className={`text-lg font-bold mb-4 ${t.text}`}>Printen</h3>
             <div className="space-y-4">
-              <div>
+                           <div>
                 <label className="flex items-center mb-2">
                   <input 
                     type="radio" 

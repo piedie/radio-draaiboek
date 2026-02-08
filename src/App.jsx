@@ -39,6 +39,11 @@ const RadioRundownPro = () => {
   // State voor klok weergave
   const [showClock, setShowClock] = useState(false);
 
+  // Live tijd (NTP) weergave
+  const [showLiveTime, setShowLiveTime] = useState(false);
+  const [liveTime, setLiveTime] = useState('');
+  const [ntpOffset, setNtpOffset] = useState(0);
+
   // State voor item types
   const [userItemTypes, setUserItemTypes] = useState([]);
   const [showItemTypeManager, setShowItemTypeManager] = useState(false);

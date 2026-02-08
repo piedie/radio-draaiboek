@@ -137,12 +137,12 @@ const RundownList = ({
   return (
     <div className={`rounded-lg border ${t.border} overflow-hidden ${t.card}`}>
       {/* Header */}
-      <div className={`grid grid-cols-12 gap-2 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide ${t.headerBg} ${t.textSecondary} border-b ${t.border}`}>
+      <div className={`sticky top-0 z-10 grid grid-cols-12 gap-1 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${t.headerBg} ${t.textSecondary} border-b ${t.border}`}>
         <div className="col-span-1">#</div>
         <div className="col-span-2">Tijd</div>
         <div className="col-span-1">Type</div>
-        <div className="col-span-4">Titel</div>
-        <div className="col-span-2">Status</div>
+        <div className="col-span-5">Titel</div>
+        <div className="col-span-1">Status</div>
         <div className="col-span-1">Duur</div>
         <div className="col-span-1 text-right">Acties</div>
       </div>
@@ -161,7 +161,7 @@ const RundownList = ({
                 onDragStart={(e) => !readOnly && handleDragStart(e, item, idx)}
                 onDragOver={(e) => !readOnly && handleDragOver(e, idx)}
                 onDrop={(e) => !readOnly && handleDrop(e, idx)}
-                className={`relative grid grid-cols-12 gap-2 px-3 py-2 items-center ${t.rowHover} ${isDragOver ? 'ring-2 ring-blue-500 ring-inset' : ''}`}
+                className={`relative grid grid-cols-12 gap-1 px-2 py-1.5 items-center ${t.rowHover} ${isDragOver ? 'ring-2 ring-blue-500 ring-inset' : ''}`}
               >
                 {/* Status strip */}
                 <div className={`absolute left-0 top-0 h-full w-1 ${getStatusStripClass(item.status)}`} />
@@ -175,8 +175,8 @@ const RundownList = ({
                 </div>
 
                 <div className="col-span-2 cursor-pointer" onClick={() => toggleExpanded(item.id)}>
-                  <div className={`text-sm font-mono ${t.text}`}>{formatTimeShort(getCumulativeTime(idx))}</div>
-                  <div className={`text-[11px] ${t.textSecondary}`}>{formatTime(getCumulativeTime(idx))}</div>
+                  <div className={`text-[13px] font-mono leading-4 ${t.text}`}>{formatTimeShort(getCumulativeTime(idx))}</div>
+                  <div className={`text-[10px] leading-3 ${t.textSecondary}`}>{formatTime(getCumulativeTime(idx))}</div>
                 </div>
 
                 <div className={`col-span-1 text-xs ${t.textSecondary} cursor-pointer`} onClick={() => toggleExpanded(item.id)}>
@@ -184,17 +184,17 @@ const RundownList = ({
                 </div>
 
                 {/* Title/Artist inline */}
-                <div className="col-span-4 min-w-0">
+                <div className="col-span-5 min-w-0">
                   {isInlineEditing ? (
                     <div className="space-y-1">
                       <input
-                        className={`w-full text-sm px-2 py-1 rounded border ${t.input}`}
+                        className={`w-full text-[13px] px-2 py-1 rounded border ${t.input}`}
                         value={inlineDraft.title}
                         onChange={(e) => setInlineDraft({ ...inlineDraft, title: e.target.value })}
                         placeholder="Titel"
                       />
                       <input
-                        className={`w-full text-xs px-2 py-1 rounded border ${t.input}`}
+                        className={`w-full text-[11px] px-2 py-1 rounded border ${t.input}`}
                         value={inlineDraft.artist}
                         onChange={(e) => setInlineDraft({ ...inlineDraft, artist: e.target.value })}
                         placeholder="Artiest (optioneel)"
@@ -202,17 +202,17 @@ const RundownList = ({
                     </div>
                   ) : (
                     <div className="cursor-pointer" onClick={() => toggleExpanded(item.id)}>
-                      <div className={`text-sm font-medium truncate ${item.status === 'cancelled' ? 'line-through opacity-60' : ''} ${t.text}`}>{item.title || '(zonder titel)'}</div>
-                      {item.artist ? <div className={`text-xs truncate ${t.textSecondary}`}>{item.artist}</div> : null}
+                      <div className={`text-[13px] leading-4 font-medium truncate ${item.status === 'cancelled' ? 'line-through opacity-60' : ''} ${t.text}`}>{item.title || '(zonder titel)'}</div>
+                      {item.artist ? <div className={`text-[11px] leading-3 truncate ${t.textSecondary}`}>{item.artist}</div> : null}
                     </div>
                   )}
                 </div>
 
                 {/* Status inline */}
-                <div className="col-span-2">
+                <div className="col-span-1">
                   {isInlineEditing ? (
                     <select
-                      className={`w-full text-sm px-2 py-1 rounded border ${t.input}`}
+                      className={`w-full text-[12px] px-2 py-1 rounded border ${t.input}`}
                       value={inlineDraft.status}
                       onChange={(e) => setInlineDraft({ ...inlineDraft, status: e.target.value })}
                     >
@@ -221,7 +221,7 @@ const RundownList = ({
                       ))}
                     </select>
                   ) : (
-                    <div className={`text-xs ${t.textSecondary}`}>{item.status || 'draft'}</div>
+                    <div className={`text-[11px] truncate ${t.textSecondary}`}>{item.status || 'draft'}</div>
                   )}
                 </div>
 
@@ -238,7 +238,7 @@ const RundownList = ({
                       title="Duur in seconden"
                     />
                   ) : (
-                    <div className={`text-sm font-mono ${t.text}`}>{formatTimeShort(item.duration || 0)}</div>
+                    <div className={`text-[13px] font-mono ${t.text}`}>{formatTimeShort(item.duration || 0)}</div>
                   )}
                 </div>
 
@@ -302,8 +302,8 @@ const RundownList = ({
 
               {/* Expanded details */}
               {isExpanded && (
-                <div className={`px-4 py-3 border-t ${t.border} ${theme === 'light' ? 'bg-white' : 'bg-gray-800'}`}>
-                  <div className="grid grid-cols-12 gap-3">
+                <div className={`px-3 py-2 border-t ${t.border} ${theme === 'light' ? 'bg-white' : 'bg-gray-800'}`}>
+                  <div className="grid grid-cols-12 gap-2">
                     <div className="col-span-12 md:col-span-6">
                       <div className={`text-xs font-semibold mb-1 ${t.textSecondary}`}>Notities</div>
                       <div className={`text-sm whitespace-pre-wrap ${t.text}`}>{item.notes || '-'}</div>

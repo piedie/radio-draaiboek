@@ -65,30 +65,66 @@ const RadioRundownPro = () => {
   const [adminFeedbackError, setAdminFeedbackError] = useState(null);
   const [selectedFeedbackId, setSelectedFeedbackId] = useState(null);
 
-  // Admin helpers
-  const loadFeedbackForAdmin = async () => {
+  // Admin console tabs
+  const [adminTab, setAdminTab] = useState('feedback'); // 'feedback' | 'memberships' | 'invites'
+
+  // Membership management
+  const [adminMembers, setAdminMembers] = useState([]);
+  const [adminMembersLoading, setAdminMembersLoading] = useState(false);
+  const [adminMembersError, setAdminMembersError] = useState(null);
+
+  // Invite management
+  const [inviteRole, setInviteRole] = useState('viewer');
+  const [inviteDays, setInviteDays] = useState(14);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError] = useState(null);
+  const [createdInvite, setCreatedInvite] = useState(null);
+  const [redeemToken, setRedeemToken] = useState('');
+  const [redeemLoading, setRedeemLoading] = useState(false);
+  const [redeemError, setRedeemError] = useState(null);
+
+  const getSiteOrigin = () => {
+    if (typeof window === 'undefined') return '';
+    return window.location.origin;
+  };
+
+  const buildInviteLink = (token) => {
+    if (!token) return '';
+    return `${getSiteOrigin()}/?invite=${encodeURIComponent(token)}`;
+  };
+
+  const copyToClipboard = async (text) => {
     try {
-      setAdminFeedbackLoading(true);
-      setAdminFeedbackError(null);
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const loadMembersForAdmin = async () => {
+    if (!currentProgramId) {
+      setAdminMembers([]);
+      return;
+    }
+
+    try {
+      setAdminMembersLoading(true);
+      setAdminMembersError(null);
 
       const { data, error } = await supabase
-        .from('feedback')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(200);
+        .from('program_memberships')
+        .select('id, program_id, user_id, role, created_at')
+        .eq('program_id', currentProgramId)
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
-
-      setAdminFeedback(data || []);
-      // Houd selectie zo mogelijk stabiel
-      if (selectedFeedbackId && !(data || []).some((f) => f.id === selectedFeedbackId)) {
-        setSelectedFeedbackId(null);
-      }
+      setAdminMembers(data || []);
     } catch (e) {
-      console.error('loadFeedbackForAdmin error:', e);
-      setAdminFeedbackError(e?.message || 'Onbekende fout bij laden van feedback');
+      console.error('loadMembersForAdmin error:', e);
+      setAdminMembersError(e?.message || 'Onbekende fout bij laden van members');
     } finally {
-      setAdminFeedbackLoading(false);
+      setAdminMembersLoading(false);
     }
   };
 
@@ -1121,10 +1157,10 @@ const RadioRundownPro = () => {
   const currentRunbook = rundowns.find(r => r.id === currentRundownId);
 
   return (
-    <div className={`${t.bg} min-h-screen p-6`}>
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className={`${t.card} rounded-lg p-6 mb-6 shadow border ${t.border}`}>
+    <div className={`${t.bg} min-h-screen p-3`}>
+      <div className="max-w-[2200px] mx-auto px-2">
+         {/* Header */}
+        <div className={`${t.card} rounded-lg p-4 mb-4 shadow border ${t.border}`}>
           <div className="flex justify-between mb-4">
             <div className="flex items-center gap-4">
               {/* Program selector (compact) */}
@@ -1623,176 +1659,284 @@ const RadioRundownPro = () => {
       {/* Admin Panel - Feedback viewer */}
       {showAdminPanel && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className={`${t.card} rounded-lg shadow-xl w-[min(1100px,95vw)] h-[min(700px,90vh)] mx-4 border ${t.border} overflow-hidden`}>
+          <div className={`${t.card} rounded-lg shadow-xl w-[min(1400px,96vw)] h-[min(780px,92vh)] mx-2 border ${t.border} overflow-hidden`}>
             <div className={`flex items-center justify-between px-4 py-3 border-b ${t.border}`}>
               <div>
                 <div className={`text-lg font-bold ${t.text}`}>Admin console</div>
-                <div className={`text-xs ${t.textSecondary}`}>Feedback viewer (max 200)</div>
+                <div className={`text-xs ${t.textSecondary}`}>Beheer per programma</div>
               </div>
-              <button
-                onClick={() => { setShowAdminPanel(false); setSelectedFeedbackId(null); }}
-                className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
-                title="Sluiten"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-12 h-full">
               <div className="flex items-center gap-2">
+                <div className={`text-xs px-2 py-1 rounded border ${t.border} ${t.textSecondary}`}>
+                  Programma: {currentProgram?.name || '—'}
+                </div>
+                <div className="hidden md:flex items-center gap-1">
+                  <button
+                    className={`${adminTab === 'feedback' ? t.button : t.buttonSecondary} px-3 py-2 rounded text-xs`}
+                    onClick={() => { setAdminTab('feedback'); loadFeedbackForAdmin(); }}
+                  >
+                    Feedback
+                  </button>
+                  <button
+                    className={`${adminTab === 'memberships' ? t.button : t.buttonSecondary} px-3 py-2 rounded text-xs`}
+                    onClick={() => { setAdminTab('memberships'); loadMembersForAdmin(); }}
+                    disabled={!currentProgramId}
+                    title={!currentProgramId ? 'Selecteer een programma' : 'Memberships'}
+                  >
+                    Memberships
+                  </button>
+                  <button
+                    className={`${adminTab === 'invites' ? t.button : t.buttonSecondary} px-3 py-2 rounded text-xs`}
+                    onClick={() => setAdminTab('invites')}
+                    disabled={!currentProgramId}
+                    title={!currentProgramId ? 'Selecteer een programma' : 'Invites'}
+                  >
+                    Invites
+                  </button>
+                </div>
                 <button
+                  onClick={() => { setShowAdminPanel(false); setSelectedFeedbackId(null); }}
                   className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
-                  onClick={loadFeedbackForAdmin}
-                  disabled={adminFeedbackLoading}
+                  title="Sluiten"
                 >
-                  ↻ Refresh
+                  <X size={16} />
                 </button>
               </div>
-              <div className={`col-span-12 md:col-span-5 border-r ${t.border} overflow-auto`}>
-                <div className={`px-4 py-2 text-xs font-semibold ${t.textSecondary} border-b ${t.border}`}>
-                  Ingekomen feedback
-                </div>
-                <div className="divide-y">
-                  {adminFeedback.map((f) => (
+            </div>
+ 
+            <div className="h-full">
+              {adminTab === 'feedback' && (
+                <div className="grid grid-cols-12 h-full">
+                  <div className="col-span-12 flex items-center justify-between gap-2 px-4 py-2 border-b">
+                    <div className={`text-xs ${t.textSecondary}`}>Feedback (max 200)</div>
                     <button
-                      key={f.id}
-                      className={`w-full text-left px-4 py-3 hover:opacity-90 ${selectedFeedbackId === f.id ? (theme === 'light' ? 'bg-gray-100' : 'bg-gray-700/50') : ''}`}
-                      onClick={() => setSelectedFeedbackId(f.id)}
+                      className={`${t.buttonSecondary} px-3 py-2 rounded text-xs`}
+                      onClick={loadFeedbackForAdmin}
+                      disabled={adminFeedbackLoading}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className={`text-xs font-semibold ${t.text}`}>{(f.type || 'suggestion').toUpperCase()}</div>
-                        <div className={`text-[11px] ${t.textSecondary}`}>{f.created_at ? new Date(f.created_at).toLocaleString() : ''}</div>
-                      </div>
-                      <div className={`text-sm mt-1 ${t.text} line-clamp-2`}>{f.message || ''}</div>
-                      <div className={`text-[11px] mt-1 ${t.textSecondary}`}>{f.user_email || f.user_id || 'onbekend'}</div>
+                      ↻ Refresh
                     </button>
-                  ))}
+                  </div>
+
+                  <div className={`col-span-12 md:col-span-5 border-r ${t.border} overflow-auto`}>
+                    <div className={`px-4 py-2 text-xs font-semibold ${t.textSecondary} border-b ${t.border}`}>
+                      Ingekomen feedback
+                    </div>
+                    <div className="divide-y">
+                      {adminFeedback.map((f) => (
+                        <button
+                          key={f.id}
+                          className={`w-full text-left px-4 py-3 hover:opacity-90 ${selectedFeedbackId === f.id ? (theme === 'light' ? 'bg-gray-100' : 'bg-gray-700/50') : ''}`}
+                          onClick={() => setSelectedFeedbackId(f.id)}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className={`text-xs font-semibold ${t.text}`}>{(f.type || 'suggestion').toUpperCase()}</div>
+                            <div className={`text-[11px] ${t.textSecondary}`}>{f.created_at ? new Date(f.created_at).toLocaleString() : ''}</div>
+                          </div>
+                          <div className={`text-sm mt-1 ${t.text} line-clamp-2`}>{f.message || ''}</div>
+                          <div className={`text-[11px] mt-1 ${t.textSecondary}`}>{f.user_email || f.user_id || 'onbekend'}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="col-span-12 md:col-span-7 overflow-auto">
+                    {(() => {
+                      const selected = selectedFeedbackId
+                        ? adminFeedback.find((f) => f.id === selectedFeedbackId)
+                        : null;
+
+                      if (!selectedFeedbackId) {
+                        return <div className={`p-4 text-sm ${t.textSecondary}`}>Selecteer links een item.</div>;
+                      }
+
+                      if (!selected) {
+                        return <div className={`p-4 text-sm ${t.textSecondary}`}>Niet gevonden.</div>;
+                      }
+
+                      return (
+                        <div className="p-4">
+                          {adminFeedbackLoading && (
+                            <div className={`p-4 text-sm ${t.textSecondary}`}>Laden…</div>
+                          )}
+                          {adminFeedbackError && (
+                            <div className="p-4 text-sm text-red-500">{adminFeedbackError}</div>
+                          )}
+                          {!adminFeedbackLoading && !adminFeedbackError && (
+                            <div>
+                              <div className={`text-lg font-bold ${t.text}`}>{(selected.type || 'suggestion').toUpperCase()}</div>
+                              <div className={`text-xs ${t.textSecondary}`}>{selected.created_at ? new Date(selected.created_at).toLocaleString() : ''}</div>
+                              <div className={`text-xs mt-1 ${t.textSecondary}`}>Van: {selected.user_email || selected.user_id || 'onbekend'}</div>
+                              <div className="mt-4">
+                                <div className={`text-sm ${t.text} whitespace-pre-line`}>{selected.message || ''}</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
-              </div>
-              <div className="col-span-12 md:col-span-7 overflow-auto">
-                {(() => {
-                  const selected = selectedFeedbackId
-                    ? adminFeedback.find((f) => f.id === selectedFeedbackId)
-                    : null;
+              )}
+              
+              {adminTab === 'memberships' && (
+                <div className="h-full overflow-auto">
+                  <div className={`px-4 py-3 border-b ${t.border} flex items-center justify-between gap-2`}>
+                    <div>
+                      <div className={`text-sm font-semibold ${t.text}`}>Memberships</div>
+                      <div className={`text-xs ${t.textSecondary}`}>Beheer leden en rollen voor dit programma.</div>
+                    </div>
+                    <button
+                      className={`${t.buttonSecondary} px-3 py-2 rounded text-xs`}
+                      onClick={loadMembersForAdmin}
+                      disabled={adminMembersLoading}
+                    >
+                      ↻ Refresh
+                    </button>
+                  </div>
 
-                  if (!selectedFeedbackId) {
-                    return <div className={`p-4 text-sm ${t.textSecondary}`}>Selecteer links een item.</div>;
-                  }
+                  {adminMembersLoading && <div className={`p-4 text-sm ${t.textSecondary}`}>Laden…</div>}
+                  {adminMembersError && <div className="p-4 text-sm text-red-500">{adminMembersError}</div>}
 
-                  if (!selected) {
-                    return <div className={`p-4 text-sm ${t.textSecondary}`}>Niet gevonden.</div>;
-                  }
-
-                  return (
+                  {!adminMembersLoading && !adminMembersError && (
                     <div className="p-4">
-                      {adminFeedbackLoading && (
-                        <div className={`p-4 text-sm ${t.textSecondary}`}>Laden…</div>
-                      )}
-                      {adminFeedbackError && (
-                        <div className="p-4 text-sm text-red-500">{adminFeedbackError}</div>
-                      )}
-                      {!adminFeedbackLoading && !adminFeedbackError && (
-                        <div>
-                          <div className={`text-lg font-bold ${t.text}`}>{(selected.type || 'suggestion').toUpperCase()}</div>
-                          <div className={`text-xs ${t.textSecondary}`}>{selected.created_at ? new Date(selected.created_at).toLocaleString() : ''}</div>
-                          <div className={`text-xs mt-1 ${t.textSecondary}`}>Van: {selected.user_email || selected.user_id || 'onbekend'}</div>
-                          <div className="mt-4">
-                            <div className={`text-sm ${t.text} whitespace-pre-line`}>{selected.message || ''}</div>
+                      <div className={`text-xs ${t.textSecondary} mb-2`}>
+                        Totaal: {adminMembers.length}
+                      </div>
+                      <div className={`rounded border ${t.border} overflow-hidden`}>
+                        <div className={`grid grid-cols-12 gap-2 px-3 py-2 text-[11px] font-semibold uppercase ${t.headerBg} ${t.textSecondary}`}>
+                          <div className="col-span-6">User ID</div>
+                          <div className="col-span-3">Role</div>
+                          <div className="col-span-3 text-right">Acties</div>
+                        </div>
+                        <div className={`divide-y ${t.divider}`}>
+                          {adminMembers.map((m) => (
+                            <div key={m.id} className="grid grid-cols-12 gap-2 px-3 py-2 items-center">
+                              <div className={`col-span-6 text-xs font-mono ${t.text}`}>{m.user_id}</div>
+                              <div className="col-span-3">
+                                <select
+                                  className={`w-full text-xs px-2 py-1 rounded border ${t.input}`}
+                                  value={m.role}
+                                  onChange={(e) => updateMemberRoleAsAdmin(m.id, e.target.value)}
+                                >
+                                  <option value="viewer">viewer</option>
+                                  <option value="editor">editor</option>
+                                  <option value="chief_editor">chief_editor</option>
+                                  <option value="admin">admin</option>
+                                </select>
+                              </div>
+                              <div className="col-span-3 flex justify-end">
+                                <button
+                                  className="text-[11px] px-2 py-1 rounded border border-red-500 text-red-600 hover:bg-red-50"
+                                  onClick={() => removeMemberAsAdmin(m.id)}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {adminTab === 'invites' && (
+                <div className="h-full overflow-auto">
+                  <div className={`px-4 py-3 border-b ${t.border}`}>
+                    <div className={`text-sm font-semibold ${t.text}`}>Invite links</div>
+                    <div className={`text-xs ${t.textSecondary}`}>Maak een deelbare link (Teams/WhatsApp) om iemand aan dit programma toe te voegen.</div>
+                  </div>
+
+                  <div className="p-4 grid grid-cols-12 gap-4">
+                    <div className={`col-span-12 lg:col-span-6 rounded border ${t.border} p-4`}>
+                      <div className={`text-sm font-semibold ${t.text}`}>Nieuwe invite</div>
+                      <div className={`text-xs ${t.textSecondary} mt-1`}>Alleen program admins kunnen invites maken.</div>
+
+                      <div className="mt-3 grid grid-cols-12 gap-2 items-end">
+                        <div className="col-span-6">
+                          <label className={`block text-xs mb-1 ${t.textSecondary}`}>Role</label>
+                          <select
+                            className={`w-full text-sm px-3 py-2 rounded border ${t.input}`}
+                            value={inviteRole}
+                            onChange={(e) => setInviteRole(e.target.value)}
+                          >
+                            <option value="viewer">viewer</option>
+                            <option value="editor">editor</option>
+                            <option value="chief_editor">chief_editor</option>
+                            <option value="admin">admin</option>
+                          </select>
+                        </div>
+                        <div className="col-span-6">
+                          <label className={`block text-xs mb-1 ${t.textSecondary}`}>Geldig (dagen)</label>
+                          <input
+                            type="number"
+                            min={1}
+                            step={1}
+                            className={`w-full text-sm px-3 py-2 rounded border ${t.input}`}
+                            value={inviteDays}
+                            onChange={(e) => setInviteDays(e.target.value)}
+                          />
+                        </div>
+                        <div className="col-span-12">
+                          <button
+                            className={`${t.button} px-4 py-2 rounded text-sm disabled:opacity-50`}
+                            disabled={inviteLoading}
+                            onClick={createInviteAsAdmin}
+                          >
+                            {inviteLoading ? 'Maken…' : 'Maak invite link'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {inviteError && <div className="mt-3 text-sm text-red-500">{inviteError}</div>}
+
+                      {createdInvite?.invite_token && (
+                        <div className={`mt-4 rounded border ${t.border} p-3`}>
+                          <div className={`text-xs ${t.textSecondary}`}>Link</div>
+                          <div className={`text-sm font-mono break-all ${t.text}`}>{buildInviteLink(createdInvite.invite_token)}</div>
+                          <div className="mt-2 flex gap-2">
+                            <button
+                              className={`${t.buttonSecondary} px-3 py-2 rounded text-xs`}
+                              onClick={async () => {
+                                const ok = await copyToClipboard(buildInviteLink(createdInvite.invite_token));
+                                if (ok) alert('Link gekopieerd');
+                              }}
+                            >
+                              Kopieer
+                            </button>
                           </div>
                         </div>
                       )}
                     </div>
-                  );
-                })()}
-               </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Feedback Modal */}
-      {showFeedbackModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className={`${t.card} p-6 rounded-lg shadow-xl max-w-md w-full mx-4`}>
-            <h2 className={`text-xl font-bold mb-4 ${t.text}`}>Feedback & Suggesties</h2>
-            
-            <div className="mb-4">
-              <label className={`block text-sm mb-2 ${t.text}`}>Type feedback:</label>
-              <select 
-                value={feedbackType} 
-                onChange={(e) => setFeedbackType(e.target.value)}
-                className={`w-full px-3 py-2 rounded border ${t.input}`}
-              >
-                <option value="suggestion">💡 Suggestie</option>
-                <option value="bug">🐛 Bug report</option>
-                <option value="feature">🚀 Feature request</option>
-                <option value="other">💬 Overig</option>
-              </select>
+                    <div className={`col-span-12 lg:col-span-6 rounded border ${t.border} p-4`}>
+                      <div className={`text-sm font-semibold ${t.text}`}>Invite verzilveren (test)</div>
+                      <div className={`text-xs ${t.textSecondary} mt-1`}>Handig om snel te testen met een token.</div>
+                      <div className="mt-3 flex gap-2">
+                        <input
+                          className={`flex-1 text-sm px-3 py-2 rounded border ${t.input}`}
+                          placeholder="invite token"
+                          value={redeemToken}
+                          onChange={(e) => setRedeemToken(e.target.value)}
+                        />
+                        <button
+                          className={`${t.buttonSecondary} px-3 py-2 rounded text-sm disabled:opacity-50`}
+                          disabled={redeemLoading}
+                          onClick={() => redeemInviteForMe(redeemToken)}
+                        >
+                          {redeemLoading ? '…' : 'Redeem'}
+                        </button>
+                      </div>
+                      {redeemError && <div className="mt-3 text-sm text-red-500">{redeemError}</div>}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-            
-            <div className="mb-4">
-              <label className={`block text-sm mb-2 ${t.text}`}>Je bericht:</label>
-              <textarea 
-                value={feedback} 
-                onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Beschrijf je feedback, suggestie of probleem..."
-                className={`w-full px-3 py-2 rounded border h-32 ${t.input}`}
-              />
-            </div>
-            
-            <div className="flex gap-3 justify-end">
-              <button 
-                onClick={testFeedbackTable}
-                className={`${t.buttonSecondary} px-3 py-2 rounded-lg text-xs`}
-                title="Test database verbinding"
-              >
-                🔍 Test
-              </button>
-              <button 
-                onClick={() => {
-                  setShowFeedbackModal(false);
-                  setFeedback('');
-                }}
-                className={`${t.buttonSecondary} px-4 py-2 rounded-lg`}
-              >
-                Annuleren
-              </button>
-              <button 
-                onClick={submitFeedback}
-                disabled={!feedback.trim()}
-                className={`${t.button} px-4 py-2 rounded-lg disabled:opacity-50`}
-              >
-                Versturen
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Footer (ingelogde view) */}
-      <footer className={`mt-6 py-3 border-t ${t.border} ${t.bg}`}>
-        <div className="max-w-7xl mx-auto px-2">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-            <div className={`text-xs ${t.textSecondary}`}>
-              © {COPYRIGHT_YEAR} Landstede MBO. Alle rechten voorbehouden.
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setShowFeedbackModal(true)}
-
-                className={`text-xs px-3 py-1.5 rounded border ${t.border} ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-gray-800'}`}
-                title="Feedback doorgeven"
-              >
-                Feedback
-              </button>
-              <div className={`text-xs ${t.textSecondary}`}>Radio Rundown Pro v{APP_VERSION}</div>
-              <div className={`text-xs ${t.textSecondary}`}>Build: {BUILD_DATE}</div>
-            </div>
-          </div>
-        </div>
-      </footer>
+           </div>
+         </div>
+       )}
     </div>
    );
 };

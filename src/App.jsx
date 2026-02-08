@@ -66,21 +66,18 @@ const RadioRundownPro = () => {
   const [selectedFeedbackId, setSelectedFeedbackId] = useState(null);
 
   // Admin console tabs
-  const [adminTab, setAdminTab] = useState('feedback'); // 'feedback' | 'users' | 'memberships' | 'invites'
-
-  // Users management (lookup by email + add to current program)
-  const [adminUserSearchEmail, setAdminUserSearchEmail] = useState('');
-  const [adminUserSearchLoading, setAdminUserSearchLoading] = useState(false);
-  const [adminUserSearchError, setAdminUserSearchError] = useState(null);
-  const [adminUserSearchResult, setAdminUserSearchResult] = useState(null); // { id, name, email } | null
-  const [adminAddUserRole, setAdminAddUserRole] = useState('viewer');
-  const [adminAddUserLoading, setAdminAddUserLoading] = useState(false);
-  const [adminAddUserError, setAdminAddUserError] = useState(null);
+  const [adminTab, setAdminTab] = useState('feedback'); // 'feedback' | 'memberships' | 'invites'
 
   // Membership management
   const [adminMembers, setAdminMembers] = useState([]);
   const [adminMembersLoading, setAdminMembersLoading] = useState(false);
   const [adminMembersError, setAdminMembersError] = useState(null);
+
+  // Add member by email
+  const [addMemberEmail, setAddMemberEmail] = useState('');
+  const [addMemberRole, setAddMemberRole] = useState('viewer');
+  const [addMemberLoading, setAddMemberLoading] = useState(false);
+  const [addMemberError, setAddMemberError] = useState(null);
 
   // Invite management
   const [inviteRole, setInviteRole] = useState('viewer');
@@ -230,55 +227,114 @@ const RadioRundownPro = () => {
     }
   };
 
-  const createInviteAsAdmin = async () => {
+  const updateMemberRoleAsAdmin = async (membershipId, nextRole) => {
+    if (!membershipId || !nextRole) return;
+    try {
+      const { error } = await supabase
+        .from('program_memberships')
+        .update({ role: nextRole })
+        .eq('id', membershipId);
+      if (error) throw error;
+
+      setAdminMembers((prev) => prev.map((m) => (m.id === membershipId ? { ...m, role: nextRole } : m)));
+
+      // Als je je eigen rol wijzigt op het huidige programma, refresh local role state.
+      if (currentUser?.id) {
+        const mine = adminMembers.find((m) => m.id === membershipId);
+        if (mine?.user_id === currentUser.id) {
+          setMyRole(nextRole);
+        }
+      }
+    } catch (e) {
+      console.error('updateMemberRoleAsAdmin error:', e);
+      alert('Rol wijzigen mislukt: ' + (e?.message || 'Onbekende fout'));
+    }
+  };
+
+  const removeMemberAsAdmin = async (membershipId) => {
+    if (!membershipId) return;
+    if (!window.confirm('Lid verwijderen uit dit programma?')) return;
+
+    try {
+      const { error } = await supabase.from('program_memberships').delete().eq('id', membershipId);
+      if (error) throw error;
+
+      setAdminMembers((prev) => prev.filter((m) => m.id !== membershipId));
+    } catch (e) {
+      console.error('removeMemberAsAdmin error:', e);
+      alert('Verwijderen mislukt: ' + (e?.message || 'Onbekende fout'));
+    }
+  };
+
+  const findUserByEmailForAdmin = async (email) => {
+    const needle = (email || '').trim().toLowerCase();
+    if (!needle) return null;
+
+    // We zoeken in profiles (admin heeft hiervoor read-rights nodig op profiles).
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, name, email')
+      .ilike('email', needle)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data || null;
+  };
+
+  const addMemberByEmailAsAdmin = async () => {
     if (!currentProgramId) {
       alert('Selecteer eerst een programma.');
       return;
     }
-    setInviteError(null);
-    setCreatedInvite(null);
+
+    const email = (addMemberEmail || '').trim();
+    if (!email) {
+      setAddMemberError('Vul een email in.');
+      return;
+    }
+
+    setAddMemberError(null);
+
     try {
-      setInviteLoading(true);
-      const { data: sessionRes } = await supabase.auth.getSession();
-      const accessToken = sessionRes?.session?.access_token;
-      if (!accessToken) throw new Error('Geen sessie-token');
+      setAddMemberLoading(true);
 
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-invite`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${accessToken}`,
+      const profile = await findUserByEmailForAdmin(email);
+      if (!profile?.id) {
+        throw new Error('Geen user gevonden met deze email. Laat de student eerst registreren / invite verzilveren.');
+      }
+
+      // Voorkom dubbele insert in UI; database uniqueness is niet gegarandeerd.
+      const already = adminMembers.some((m) => m.user_id === profile.id);
+      if (already) {
+        throw new Error('Deze user is al lid van dit programma.');
+      }
+
+      const { data: inserted, error } = await supabase
+        .from('program_memberships')
+        .insert({ program_id: currentProgramId, user_id: profile.id, role: addMemberRole })
+        .select('id, program_id, user_id, role, created_at')
+        .single();
+
+      if (error) throw error;
+
+      setAdminMembers((prev) => [
+        ...prev,
+        {
+          ...inserted,
+          profiles: profile,
         },
-        body: JSON.stringify({
-          program_id: currentProgramId,
-          role: inviteRole,
-          expires_in_days: Number(inviteDays) || 14,
-        }),
-      });
+      ]);
 
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || `Invite maken mislukt (${res.status})`);
-
-      setCreatedInvite(json.invite);
+      setAddMemberEmail('');
+      setAddMemberRole('viewer');
     } catch (e) {
-      console.error('createInviteAsAdmin error:', e);
-      setInviteError(e?.message || 'Onbekende fout');
+      console.error('addMemberByEmailAsAdmin error:', e);
+      setAddMemberError(e?.message || 'Onbekende fout');
     } finally {
-      setInviteLoading(false);
+      setAddMemberLoading(false);
     }
   };
-
-  const [draggedItem, setDraggedItem] = useState(null);
-  const [dragOverIndex, setDragOverIndex] = useState(null);
-  const [showJingleEditor, setShowJingleEditor] = useState(false);
-  const [jingles, setJingles] = useState([]);
-  const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
-
-  // State voor live tijd weergave
-  const [showLiveTime, setShowLiveTime] = useState(false);
-  const [liveTime, setLiveTime] = useState('');
-  const [ntpOffset, setNtpOffset] = useState(0);
 
   const t = theme === 'light' ? {
     bg: 'bg-gray-50', card: 'bg-white', text: 'text-gray-900', textSecondary: 'text-gray-600',
@@ -1576,7 +1632,7 @@ const RadioRundownPro = () => {
                   <div
                     key={rb.id}
                     className={`flex items-center gap-2 rounded border ${t.border} ${rb.id === currentRundownId ? (theme === 'light' ? 'bg-blue-50 border-blue-200' : 'bg-blue-950/30 border-blue-800/40') : ''}`}
-                  >
+                 >
                     <button
                       type="button"
                       className="flex-1 text-left px-3 py-2 min-w-0"
@@ -1825,12 +1881,6 @@ const RadioRundownPro = () => {
                     Feedback
                   </button>
                   <button
-                    className={`${adminTab === 'users' ? t.button : t.buttonSecondary} px-3 py-2 rounded text-xs`}
-                    onClick={() => { setAdminTab('users'); }}
-                  >
-                    Gebruikers
-                  </button>
-                  <button
                     className={`${adminTab === 'memberships' ? t.button : t.buttonSecondary} px-3 py-2 rounded text-xs`}
                     onClick={() => { setAdminTab('memberships'); loadMembersForAdmin(); }}
                     disabled={!currentProgramId}
@@ -1937,78 +1987,6 @@ const RadioRundownPro = () => {
                 </div>
               )}
               
-              {adminTab === 'users' && (
-                <div className="h-full overflow-auto">
-                  <div className={`px-4 py-3 border-b ${t.border} flex items-center justify-between gap-2`}>
-                    <div>
-                      <div className={`text-sm font-semibold ${t.text}`}>Zoek en voeg gebruikers toe</div>
-                      <div className={`text-xs ${t.textSecondary}`}>Voeg gebruikers toe aan dit programma via e-mail.</div>
-                    </div>
-                  </div>
-
-                  <div className="p-4">
-                    <div className="grid grid-cols-12 gap-4">
-                      <div className="col-span-12 sm:col-span-8">
-                        <input
-                          type="text"
-                          value={adminUserSearchEmail}
-                          onChange={(e) => setAdminUserSearchEmail(e.target.value)}
-                          className={`w-full text-sm px-3 py-2 rounded border ${t.input}`}
-                          placeholder="Voer e-mailadres in"
-                          disabled={adminUserSearchLoading}
-                        />
-                      </div>
-                      <div className="col-span-12 sm:col-span-4">
-                        <button
-                          onClick={findUserByEmailForAdmin}
-                          className={`${t.button} w-full px-4 py-2 rounded text-sm`}
-                          disabled={adminUserSearchLoading}
-                        >
-                          {adminUserSearchLoading ? 'Zoeken…' : 'Zoek gebruiker'}
-                        </button>
-                      </div>
-                    </div>
-
-                    {adminUserSearchError && <div className="mt-3 text-sm text-red-500">{adminUserSearchError}</div>}
-
-                    {adminUserSearchResult && (
-                      <div className={`mt-4 rounded border ${t.border} p-3`}>
-                        <div className={`text-xs ${t.textSecondary}`}>Zoekresultaat</div>
-                        <div className={`text-sm font-medium ${t.text}`}>
-                          {adminUserSearchResult.name} ({adminUserSearchResult.email})
-                        </div>
-                        <div className="mt-2 grid grid-cols-2 gap-2">
-                          <div>
-                            <label className={`block text-xs mb-1 ${t.textSecondary}`}>Rol</label>
-                            <select
-                              className={`w-full text-sm px-3 py-2 rounded border ${t.input}`}
-                              value={adminAddUserRole}
-                              onChange={(e) => setAdminAddUserRole(e.target.value)}
-                            >
-                              <option value="viewer">viewer</option>
-                              <option value="editor">editor</option>
-                              <option value="chief_editor">chief_editor</option>
-                              <option value="admin">admin</option>
-                            </select>
-                          </div>
-                          <div className="flex items-end">
-                            <button
-                              onClick={addUserToCurrentProgramAsAdmin}
-                              className={`${t.button} px-4 py-2 rounded text-sm flex-1`}
-                              disabled={adminAddUserLoading}
-                            >
-                              {adminAddUserLoading ? 'Toevoegen…' : 'Voeg toe aan programma'}
-                            </button>
-                          </div>
-                        </div>
-
-                        {adminAddUserError && <div className="mt-3 text-sm text-red-500">{adminAddUserError}</div>}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
               {adminTab === 'memberships' && (
                 <div className="h-full overflow-auto">
                   <div className={`px-4 py-3 border-b ${t.border} flex items-center justify-between gap-2`}>
@@ -2023,6 +2001,51 @@ const RadioRundownPro = () => {
                     >
                       ↻ Refresh
                     </button>
+                  </div>
+
+                  <div className={`px-4 py-3 border-b ${t.border}`}>
+                    <div className={`text-xs font-semibold uppercase tracking-wide ${t.textSecondary}`}>Lid toevoegen</div>
+                    <div className="mt-2 grid grid-cols-12 gap-2 items-end">
+                      <div className="col-span-12 md:col-span-6">
+                        <label className={`block text-xs mb-1 ${t.textSecondary}`}>Email</label>
+                        <input
+                          type="email"
+                          className={`w-full text-sm px-3 py-2 rounded border ${t.input}`}
+                          placeholder="student@school.nl"
+                          value={addMemberEmail}
+                          onChange={(e) => setAddMemberEmail(e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-12 md:col-span-3">
+                        <label className={`block text-xs mb-1 ${t.textSecondary}`}>Role</label>
+                        <select
+                          className={`w-full text-sm px-3 py-2 rounded border ${t.input}`}
+                          value={addMemberRole}
+                          onChange={(e) => setAddMemberRole(e.target.value)}
+                        >
+                          <option value="viewer">viewer</option>
+                          <option value="editor">editor</option>
+                          <option value="chief_editor">chief_editor</option>
+                          <option value="admin">admin</option>
+                        </select>
+                      </div>
+                      <div className="col-span-12 md:col-span-3">
+                        <button
+                          type="button"
+                          className={`${t.button} w-full px-4 py-2 rounded text-sm disabled:opacity-50`}
+                          disabled={addMemberLoading}
+                          onClick={addMemberByEmailAsAdmin}
+                        >
+                          {addMemberLoading ? 'Toevoegen…' : 'Toevoegen'}
+                        </button>
+                      </div>
+                      {addMemberError && (
+                        <div className="col-span-12 text-sm text-red-500">{addMemberError}</div>
+                      )}
+                      <div className={`col-span-12 text-[11px] ${t.textSecondary}`}>
+                        Tip: als de gebruiker niet gevonden wordt, laat hem/haar eerst registreren of via een invite-link binnenkomen.
+                      </div>
+                    </div>
                   </div>
 
                   {adminMembersLoading && <div className={`p-4 text-sm ${t.textSecondary}`}>Laden…</div>}

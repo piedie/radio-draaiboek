@@ -66,7 +66,16 @@ const RadioRundownPro = () => {
   const [selectedFeedbackId, setSelectedFeedbackId] = useState(null);
 
   // Admin console tabs
-  const [adminTab, setAdminTab] = useState('feedback'); // 'feedback' | 'memberships' | 'invites'
+  const [adminTab, setAdminTab] = useState('feedback'); // 'feedback' | 'users' | 'memberships' | 'invites'
+
+  // Users management (lookup by email + add to current program)
+  const [adminUserSearchEmail, setAdminUserSearchEmail] = useState('');
+  const [adminUserSearchLoading, setAdminUserSearchLoading] = useState(false);
+  const [adminUserSearchError, setAdminUserSearchError] = useState(null);
+  const [adminUserSearchResult, setAdminUserSearchResult] = useState(null); // { id, name, email } | null
+  const [adminAddUserRole, setAdminAddUserRole] = useState('viewer');
+  const [adminAddUserLoading, setAdminAddUserLoading] = useState(false);
+  const [adminAddUserError, setAdminAddUserError] = useState(null);
 
   // Membership management
   const [adminMembers, setAdminMembers] = useState([]);
@@ -1816,6 +1825,12 @@ const RadioRundownPro = () => {
                     Feedback
                   </button>
                   <button
+                    className={`${adminTab === 'users' ? t.button : t.buttonSecondary} px-3 py-2 rounded text-xs`}
+                    onClick={() => { setAdminTab('users'); }}
+                  >
+                    Gebruikers
+                  </button>
+                  <button
                     className={`${adminTab === 'memberships' ? t.button : t.buttonSecondary} px-3 py-2 rounded text-xs`}
                     onClick={() => { setAdminTab('memberships'); loadMembersForAdmin(); }}
                     disabled={!currentProgramId}
@@ -1922,6 +1937,78 @@ const RadioRundownPro = () => {
                 </div>
               )}
               
+              {adminTab === 'users' && (
+                <div className="h-full overflow-auto">
+                  <div className={`px-4 py-3 border-b ${t.border} flex items-center justify-between gap-2`}>
+                    <div>
+                      <div className={`text-sm font-semibold ${t.text}`}>Zoek en voeg gebruikers toe</div>
+                      <div className={`text-xs ${t.textSecondary}`}>Voeg gebruikers toe aan dit programma via e-mail.</div>
+                    </div>
+                  </div>
+
+                  <div className="p-4">
+                    <div className="grid grid-cols-12 gap-4">
+                      <div className="col-span-12 sm:col-span-8">
+                        <input
+                          type="text"
+                          value={adminUserSearchEmail}
+                          onChange={(e) => setAdminUserSearchEmail(e.target.value)}
+                          className={`w-full text-sm px-3 py-2 rounded border ${t.input}`}
+                          placeholder="Voer e-mailadres in"
+                          disabled={adminUserSearchLoading}
+                        />
+                      </div>
+                      <div className="col-span-12 sm:col-span-4">
+                        <button
+                          onClick={findUserByEmailForAdmin}
+                          className={`${t.button} w-full px-4 py-2 rounded text-sm`}
+                          disabled={adminUserSearchLoading}
+                        >
+                          {adminUserSearchLoading ? 'Zoeken…' : 'Zoek gebruiker'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {adminUserSearchError && <div className="mt-3 text-sm text-red-500">{adminUserSearchError}</div>}
+
+                    {adminUserSearchResult && (
+                      <div className={`mt-4 rounded border ${t.border} p-3`}>
+                        <div className={`text-xs ${t.textSecondary}`}>Zoekresultaat</div>
+                        <div className={`text-sm font-medium ${t.text}`}>
+                          {adminUserSearchResult.name} ({adminUserSearchResult.email})
+                        </div>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <div>
+                            <label className={`block text-xs mb-1 ${t.textSecondary}`}>Rol</label>
+                            <select
+                              className={`w-full text-sm px-3 py-2 rounded border ${t.input}`}
+                              value={adminAddUserRole}
+                              onChange={(e) => setAdminAddUserRole(e.target.value)}
+                            >
+                              <option value="viewer">viewer</option>
+                              <option value="editor">editor</option>
+                              <option value="chief_editor">chief_editor</option>
+                              <option value="admin">admin</option>
+                            </select>
+                          </div>
+                          <div className="flex items-end">
+                            <button
+                              onClick={addUserToCurrentProgramAsAdmin}
+                              className={`${t.button} px-4 py-2 rounded text-sm flex-1`}
+                              disabled={adminAddUserLoading}
+                            >
+                              {adminAddUserLoading ? 'Toevoegen…' : 'Voeg toe aan programma'}
+                            </button>
+                          </div>
+                        </div>
+
+                        {adminAddUserError && <div className="mt-3 text-sm text-red-500">{adminAddUserError}</div>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {adminTab === 'memberships' && (
                 <div className="h-full overflow-auto">
                   <div className={`px-4 py-3 border-b ${t.border} flex items-center justify-between gap-2`}>

@@ -83,6 +83,39 @@ const RadioRundownPro = () => {
   const [redeemLoading, setRedeemLoading] = useState(false);
   const [redeemError, setRedeemError] = useState(null);
 
+  const redeemInviteForMe = async (token) => {
+    const tkn = (token ?? '').trim();
+    if (!tkn) return;
+    setRedeemError(null);
+    try {
+      setRedeemLoading(true);
+      const { data: sessionRes } = await supabase.auth.getSession();
+      const accessToken = sessionRes?.session?.access_token;
+      if (!accessToken) throw new Error('Geen sessie-token');
+
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/redeem-invite`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ invite_token: tkn }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || `Invite verzilveren mislukt (${res.status})`);
+
+      await loadUserData(currentUser.id);
+      alert('Invite verzilverd. Programma is toegevoegd.');
+    } catch (e) {
+      console.error('redeemInviteForMe error:', e);
+      setRedeemError(e?.message || 'Onbekende fout');
+    } finally {
+      setRedeemLoading(false);
+    }
+  };
+
   const getSiteOrigin = () => {
     if (typeof window === 'undefined') return '';
     return window.location.origin;
@@ -168,6 +201,45 @@ const RadioRundownPro = () => {
       setAdminMembersError(e?.message || 'Onbekende fout bij laden van members');
     } finally {
       setAdminMembersLoading(false);
+    }
+  };
+
+  const createInviteAsAdmin = async () => {
+    if (!currentProgramId) {
+      alert('Selecteer eerst een programma.');
+      return;
+    }
+    setInviteError(null);
+    setCreatedInvite(null);
+    try {
+      setInviteLoading(true);
+      const { data: sessionRes } = await supabase.auth.getSession();
+      const accessToken = sessionRes?.session?.access_token;
+      if (!accessToken) throw new Error('Geen sessie-token');
+
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-invite`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          program_id: currentProgramId,
+          role: inviteRole,
+          expires_in_days: Number(inviteDays) || 14,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || `Invite maken mislukt (${res.status})`);
+
+      setCreatedInvite(json.invite);
+    } catch (e) {
+      console.error('createInviteAsAdmin error:', e);
+      setInviteError(e?.message || 'Onbekende fout');
+    } finally {
+      setInviteLoading(false);
     }
   };
 
@@ -1723,6 +1795,7 @@ const RadioRundownPro = () => {
                 <button
                   onClick={() => { setShowAdminPanel(false); setSelectedFeedbackId(null); }}
                   className={`${t.buttonSecondary} px-3 py-2 rounded text-sm`}
+                 
                   title="Sluiten"
                 >
                   <X size={16} />
@@ -1776,7 +1849,7 @@ const RadioRundownPro = () => {
                         return <div className={`p-4 text-sm ${t.textSecondary}`}>Selecteer links een item.</div>;
                       }
 
- if (!selected) {
+                      if (!selected) {
                         return <div className={`p-4 text-sm ${t.textSecondary}`}>Niet gevonden.</div>;
                       }
 

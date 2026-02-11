@@ -1405,7 +1405,8 @@ const RadioRundownPro = () => {
     );
   }
 
-  const currentRundown = rundowns.find(r => r.id === currentRundownId);
+  // Huidig geselecteerd draaiboek (voor header/rename)
+  const currentRunbook = rundowns.find((r) => r.id === currentRundownId) || null;
 
   return (
     <div className={`${t.bg} min-h-screen p-3`}>

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Check } from 'lucide-react';
 import { searchSpotifyTrack, testSpotifyAPI } from '../spotifyClient';
+import { supabase } from '../supabaseClient';
 
 const ItemForm = ({ 
   item, 
@@ -56,6 +57,8 @@ const ItemForm = ({
   const [previewAudio, setPreviewAudio] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [uploadingAudio, setUploadingAudio] = useState(false);
+  const [reportageUploading, setReportageUploading] = useState(false);
+  const [reportageError, setReportageError] = useState(null);
 
   const t = theme === 'light' ? {
     card: 'bg-white',
@@ -317,6 +320,40 @@ const ItemForm = ({
       console.error('Audio play error:', error);
       alert('Kan audiobestand niet afspelen');
     });
+  };
+
+  const uploadReportageAudio = async (file) => {
+    if (!file) return;
+
+    const allowed = ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/wave'];
+    if (!allowed.includes(file.type) && !/\.(mp3|wav)$/i.test(file.name || '')) {
+      throw new Error('Alleen MP3 of WAV toegestaan');
+    }
+
+    const maxBytes = 20 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      throw new Error('Bestand is te groot (max 20MB)');
+    }
+
+    const { data: sessionRes } = await supabase.auth.getSession();
+    const uid = sessionRes?.session?.user?.id;
+    if (!uid) throw new Error('Niet ingelogd');
+
+    const safeName = (file.name || 'audio').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `reportages/${uid}/${Date.now()}-${safeName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('audio')
+      .upload(path, file, { upsert: true, contentType: file.type || 'audio/mpeg' });
+
+    if (uploadError) throw uploadError;
+
+    // Prefer public URL if bucket is public; otherwise this will still return a URL but might be blocked.
+    const { data: pub } = supabase.storage.from('audio').getPublicUrl(path);
+    const publicUrl = pub?.publicUrl;
+    if (!publicUrl) throw new Error('Kon geen public URL maken');
+
+    return { publicUrl, path };
   };
 
   return (
@@ -708,6 +745,55 @@ const ItemForm = ({
                 </>
               )}
 
+              {/* Reportage audio upload */}
+              {form.type === 'reportage' && (
+                <div className={`p-3 rounded border ${t.border} ${theme === 'light' ? 'bg-amber-50' : 'bg-amber-950/20'}`}>
+                  <div className={`text-sm font-semibold mb-2 ${t.text}`}>🎧 Reportage audio</div>
+                  <div className={`text-xs mb-3 ${t.textSecondary}`}>Upload MP3/WAV (max 20MB). Wordt opgeslagen in bucket <code className="font-mono">audio</code>.</div>
+
+                  <input
+                    type="file"
+                    accept="audio/mpeg,audio/wav,.mp3,.wav"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setReportageError(null);
+                      try {
+                        setReportageUploading(true);
+                        const { publicUrl } = await uploadReportageAudio(file);
+                        setForm((prev) => ({ ...prev, audio_url: publicUrl }));
+                      } catch (err) {
+                        console.error('reportage upload error', err);
+                        setReportageError(err?.message || 'Upload mislukt');
+                      } finally {
+                        setReportageUploading(false);
+                        e.target.value = '';
+                      }
+                    }}
+                    disabled={reportageUploading}
+                    className={`block w-full text-sm ${t.textSecondary}`}
+                  />
+
+                  {reportageError && <div className="mt-2 text-sm text-red-500">{reportageError}</div>}
+
+                  {form.audio_url && (
+                    <div className="mt-3">
+                      <div className={`text-xs font-semibold mb-1 ${t.textSecondary}`}>Voorbeeld</div>
+                      <audio controls preload="none" src={form.audio_url} className="w-full" />
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          className={`text-xs px-3 py-2 rounded border ${t.border} ${t.textSecondary} ${theme === 'light' ? 'hover:bg-white' : 'hover:bg-gray-800'}`}
+                          onClick={() => setForm((prev) => ({ ...prev, audio_url: null }))}
+                        >
+                          Verwijder audio-link
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Script velden */}
               <div>
                 <label className={`block text-sm mb-1 ${t.text}`}>Eerste woorden</label>
@@ -719,7 +805,7 @@ const ItemForm = ({
               </div>
 
               <div>
-                <label className={`block text-sm mb-1 ${t.text}`}>Hoofdtekst</label>
+                <label className={`block text-sm mb-1 ${t.text}`}>Notities</label>
                 <textarea 
                   value={form.notes || ''} 
                   onChange={(e) => setForm({...form, notes: e.target.value})} 

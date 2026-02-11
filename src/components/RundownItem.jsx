@@ -240,7 +240,12 @@ const RundownItem = ({
           <div className="flex-1 cursor-pointer" onClick={() => toggleExpanded(item.id)}>
             <div className="flex items-center gap-2">
               <div className={`font-medium ${t.text}`}>{item.title}</div>
-              <span className={`text-xs px-2 py-0.5 rounded ${statusMeta.cls}`}>{statusMeta.label}</span>
+              <span
+                className={`text-xs px-2 py-0.5 rounded ${statusMeta.cls}`}
+                title="Status"
+              >
+                {statusMeta.label}
+              </span>
             </div>
             {item.artist && (
               <div className={`text-sm ${t.textSecondary}`}>{item.artist}</div>
@@ -317,11 +322,11 @@ const RundownItem = ({
         <div className={`mt-3 pt-3 border-t ${t.border}`}>
           <div className={`text-sm p-3 rounded ${theme === 'light' ? 'bg-gray-50' : 'bg-gray-900'}`}>
             {item.first_words && (
-              <div className="mb-3 p-2 bg-green-100 dark:bg-green-900 bg-opacity-30 rounded">
-                <div className="text-xs text-green-600 dark:text-green-400 mb-1 font-semibold">
-                  EERSTE WOORDEN:
+              <div className="mb-3 p-3 bg-green-100 dark:bg-green-900 bg-opacity-40 rounded border border-green-200 dark:border-green-800">
+                <div className="text-[11px] text-green-700 dark:text-green-300 mb-1 font-bold tracking-wide">
+                  EERSTE WOORDEN
                 </div>
-                <div>{item.first_words}</div>
+                <div className={`${t.text} whitespace-pre-wrap leading-relaxed`}>{item.first_words}</div>
               </div>
             )}
             
@@ -450,19 +455,19 @@ const RundownItem = ({
             )}
             
             {item.notes && (
-              <div className="mb-3">
-                <div className={`text-xs mb-1 font-semibold ${t.textSecondary}`}>
-                  HOOFDTEKST:
+              <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-950/30 rounded border border-amber-200 dark:border-amber-800">
+                <div className="text-[11px] text-amber-700 dark:text-amber-300 mb-1 font-bold tracking-wide">
+                  NOTITIES / OPMERKINGEN (voor presentator)
                 </div>
-                <div>{item.notes}</div>
+                <div className={`${t.text} whitespace-pre-wrap leading-relaxed`}>{item.notes}</div>
               </div>
             )}
             {item.last_words && (
-              <div className="p-2 bg-blue-100 dark:bg-blue-900 bg-opacity-30 rounded">
-                <div className="text-xs text-blue-600 dark:text-blue-400 mb-1 font-semibold">
-                  LAATSTE WOORDEN:
+              <div className="p-3 bg-blue-100 dark:bg-blue-900 bg-opacity-40 rounded border border-blue-200 dark:border-blue-800">
+                <div className="text-[11px] text-blue-700 dark:text-blue-300 mb-1 font-bold tracking-wide">
+                  LAATSTE WOORDEN
                 </div>
-                <div>{item.last_words}</div>
+                <div className={`${t.text} whitespace-pre-wrap leading-relaxed`}>{item.last_words}</div>
               </div>
             )}
           </div>
